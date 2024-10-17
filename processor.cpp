@@ -14,7 +14,6 @@ enum IndexRegistrs // Это не сюда, это в ассемблер
     RCX, 
     RDX,
     REX,
-
 };
 
 enum MashineCode
@@ -44,8 +43,8 @@ struct SPU
 
 
 size_t read_file_code(int argc, const char *argv[], SPU* proc);
-void doing_code(SPU* proc);
-void print_code(StackElem_t code[], size_t size_code);
+void doing_code      (SPU* proc);
+void print_code      (StackElem_t code[], size_t size_code);
 
 
 
@@ -75,7 +74,7 @@ void doing_code(SPU* proc)
     bool continue_process = true;
     while (continue_process)
     {
-        print_stack_info(&proc->stack, OK);
+        //print_stack_info(&proc->stack, OK);
         int command = (int) proc->code[proc->ip];
         switch (command)
         {
@@ -95,7 +94,6 @@ void doing_code(SPU* proc)
             proc->registers[arg] = (&proc->stack)->arr[(&proc->stack)->size-1];
             stack_pop(&proc->stack);
             break;}
-
         
         case ADD:
             {proc->ip++;
