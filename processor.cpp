@@ -52,7 +52,7 @@ void print_code      (StackElem_t code[], size_t size_code);
 
 
 
-int main(int argc, const char *argv[])
+int main(int argc, const char *argv[]) // флаги мешают (или нет...)
 {
     // StackElem_t code[MAX_CODE_SIZE] = {};
     SPU proc = {};
