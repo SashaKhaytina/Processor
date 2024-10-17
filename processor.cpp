@@ -129,7 +129,7 @@ void doing_code(SPU* proc)
 
             printf("%g - это результат\n", (&proc->stack)->arr[(&proc->stack)->size-1]);
             stack_pop(&proc->stack);
-            printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
+            //printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
             break;}
 
         case JUMP:
