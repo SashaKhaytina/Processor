@@ -38,12 +38,13 @@ enum MashineCode
 };
 
 const size_t MAX_CODE_SIZE = 10000;
-const size_t MAX_NAME_MARK_SIZE = 10; // TODO: it's label
+const size_t MAX_NAME_LABEL_SIZE = 10; // TODO: it's label
 const size_t MAX_MARK_MASS_SIZE = 10;
+const size_t MAX_COMAND_SIZE = 50;
 
-struct Mark
+struct Label
 {
-    char name[MAX_NAME_MARK_SIZE];
+    char name[MAX_NAME_LABEL_SIZE];
     int number_comand;
 };
 
@@ -57,8 +58,8 @@ struct Labels
 // void run_compil(int argc, const char *argv[], double code[]);
 int code_put(int argc, const char *argv[], double code[], Labels* lables); // Он заполняет!
 void print_code(double code[], size_t size_code);
-void code_output_file(int argc, const char *argv[], double code[], size_t size);
-
+//void code_output_file(int argc, const char *argv[], double code[], size_t size);
+void code_output_file(double code[], size_t size_code);
 
 
 
@@ -68,30 +69,23 @@ int main(int argc, const char *argv[])
     Labels labels = {};
     size_t size = (size_t) code_put(argc, argv, code, &labels);
     print_code(code, size);
-    code_output_file(argc, argv, code, size);
+    code_output_file(code, size);
     
 }
 
 
-
+/*
 void code_output_file(int argc, const char *argv[], double code[], size_t size)
 {
     FILE* file_code = fopen("program_code.txt", "w");
 
-    //printf("%p - uk1\n", file_code);
     int ip = 0;
 
     // TODO: just print code[] array, switch is weird here
 
 
-
-    //int counter_comand = 0;
     while(ip < size) // вроде такой критерий...
     {
-        //printf("BBBBBBBBBBBBBBBBBB\n");
-        //printf("%s - res\n", command);
-        //printf("CCCCC\n");
-
         int command = code[ip];
 
         switch (command)
@@ -155,14 +149,14 @@ void code_output_file(int argc, const char *argv[], double code[], size_t size)
         }
 
     }
+    fclose(file_code);
 }
-
+*/
 
 
 int code_put(int argc, const char *argv[], double code[], Labels* lables)
 {
     FILE* file_asm = NULL;
-    //printf("%p - uk1\n", file_code);
     int ip = 0;
     
 
@@ -172,69 +166,44 @@ int code_put(int argc, const char *argv[], double code[], Labels* lables)
     }
     else
     {
-        //printf("AAAAAAAAAAAAA\n");
         file_asm = fopen("program_asm.txt", "r");
     }
 
-
-
-    //int counter_comand = 0;
     while (true)   // ЭТО ПЛОХО!!! НИЖЕ HLT СТРОКИ НЕ ПРОЧИТАЕТ!!!! Надо сделать пока не EOF
     {
 
-        //printf("BBBBBBBBBBBBBBBBBB\n");
-        char command[50] = {}; // TODO: wtf
+        char command[MAX_COMAND_SIZE] = {};
         printf("%p - uk\n", file_asm);
         fscanf(file_asm, "%s", command); // При чтении меток (где они объявляются), этот съест всю строку. Как-то проверить, что последний символ ":"
         // if (fscanf(file_asm, "%s:", command) == 0) // TODO: try to use that
-        //printf("%s - res\n", command);
-        //printf("CCCCC\n");
+
         size_t len_str = strlen(command);
 
         if (command[len_str - 1] == ':') 
         {
-            //printf("AAASDASASDASDASDASDAD:::::::\n");
             command[len_str - 1] = '\0';
             int ind = atoi(command);
 
             lables->arr[ind] = ip; // так как в маш коде она же пропадает...
             lables->size++; // TODO: why lables
 
-
-
-            // // перевод строки "num:" в число num (ИЛИ можно ли как-то сделать срез?)
-            // int num = 0;
-            // for (size_t i = 0; i < len_str; i++)
-            // {
-
-            // }
             continue;
         }
 
         if (strcmp(command, "PUSH") == 0)
         {
-            //printf("asdaslkdnaishfasgyusdyugiuguyzgdfuigyzrgiuzgtyi\n");
-            // printf("%d ", PUSH);
-
-            //fprintf(file_code, "%d ", PUSH);
-
-            // double arg = 0;
-            // fscanf(file_asm, "%lg", &arg);
-            // fprintf(file_code, "%lg \n", arg);
 
             char arg[10] = {};
             fscanf(file_asm, "%s", arg);
             if (isdigit(arg[0]))
             {
                 code[ip++] = PUSH;
-                code[ip++] = (double) atoi(arg); // TODO: use atof
-                //fprintf(file_code, "%d ", PUSH);
-                //fprintf(file_code, "%lg \n", (double) atoi(arg));
+                code[ip++] = atof(arg); // TODO: use atof
+
             }
             else
             {
                 code[ip++] = PUSHR;
-                //fprintf(file_code, "%d ", PUSHR);
 
                 if      (strcmp(arg, "RAX") == 0) code[ip++] = RAX; // ТУТ ДОЛЖЕН БЫТЬ if С ПРОВЕРКОЙ, что это за регистр
                 else if (strcmp(arg, "RBX") == 0) code[ip++] = RBX;
@@ -243,32 +212,21 @@ int code_put(int argc, const char *argv[], double code[], Labels* lables)
                 else if (strcmp(arg, "REX") == 0) code[ip++] = REX;
             }
 
-
-
-
-            // printf("%lg ", arg);
-
-            //counter_comand++;
-
             continue;
         }
 
         if (strcmp(command, "POP") == 0)
         {
             code[ip++] = POP;
-            //fprintf(file_code, "%d ", POP);
 
             char arg[10] = {};
             fscanf(file_asm, "%s", arg);
 
-            //fprintf(file_code, "0 \n"); // ТУТ ДОЛЖЕН БЫТЬ if С ПРОВЕРКОЙ arg, что это за регистр
             if      (strcmp(arg, "RAX") == 0) code[ip++] = RAX; // ТУТ ДОЛЖЕН БЫТЬ if С ПРОВЕРКОЙ, что это за регистр
             else if (strcmp(arg, "RBX") == 0) code[ip++] = RBX;
             else if (strcmp(arg, "RCX") == 0) code[ip++] = RCX;
             else if (strcmp(arg, "RDX") == 0) code[ip++] = RDX;
             else if (strcmp(arg, "REX") == 0) code[ip++] = REX;
-
-            //counter_comand++;
 
             continue;
         }
@@ -277,41 +235,25 @@ int code_put(int argc, const char *argv[], double code[], Labels* lables)
 
         if (strcmp(command, "ADD") == 0)
         {
-            //fprintf(file_code, "%d \n", ADD);
             code[ip++] = ADD;
-
-            //counter_comand++;
-
             continue;
         }
 
         if (strcmp(command, "SUB") == 0)
         {
-            //fprintf(file_code, "%d \n", SUB);
             code[ip++] = SUB;
-
-            //counter_comand++;
-
             continue;
         }
 
         if (strcmp(command, "MUL") == 0)
         {
-            //fprintf(file_code, "%d \n", MUL);
             code[ip++] = MUL;
-
-            //counter_comand++;
-
             continue;
         }
 
         if (strcmp(command, "OUT") == 0)
         {
-            //fprintf(file_code, "%d \n", OUT);
             code[ip++] = OUT;
-
-            //counter_comand++;
-
             continue;
         }
 
@@ -319,28 +261,16 @@ int code_put(int argc, const char *argv[], double code[], Labels* lables)
         {
             code[ip++] = JUMP;
 
-            // int arg = 0;
-            // fscanf(file_asm, "%d", &arg);
-            // code[ip++] = (double) arg;
-
-            char arg[MAX_NAME_MARK_SIZE] = "";
+            char arg[MAX_NAME_LABEL_SIZE] = "";
             fscanf(file_asm, "%s", arg);
 
             // Тут можно сделать формат буквы/цифры и от этого работать. (Как в push, например) (НО когда это метка - буквами)
             size_t len_arg = strlen(arg);
-            if (arg[len_arg - 1] == ':')
-            {
-                arg[len_arg - 1] = '\0';
-                int ind = atoi(arg);
 
-                code[ip++] = lables->arr[ind]; // В ctor прописать, что все по дефолту -1
-            }
-            else
-            {
-                int int_arg = atoi(arg); // TODO: delete (ja 4 is cringe)
-                code[ip++] = (double) int_arg;
-            }
-            
+            arg[len_arg - 1] = '\0';
+            int ind = atoi(arg);
+
+            code[ip++] = lables->arr[ind]; // В ctor прописать, что все по дефолту -1
 
 
             continue;
@@ -348,61 +278,33 @@ int code_put(int argc, const char *argv[], double code[], Labels* lables)
 
         if (strcmp(command, "JA") == 0)
         {
-            //fprintf(file_code, "%d ", JA);
             code[ip++] = JA;
 
-            // int arg = 0;
-            // fscanf(file_asm, "%d", &arg);
-            
-            //fprintf(file_code, "%d \n", arg);
-            
-            char arg[MAX_NAME_MARK_SIZE] = "";
+            char arg[MAX_NAME_LABEL_SIZE] = "";
             fscanf(file_asm, "%s", arg);
 
             // Тут можно сделать формат буквы/цифры и от этого работать. (Как в push, например) (НО когда это метка - буквами)
             size_t len_arg = strlen(arg);
-            if (arg[len_arg - 1] == ':')
-            {
-                arg[len_arg - 1] = '\0';
-                int ind = atoi(arg);
 
-                code[ip++] = lables->arr[ind]; // В ctor прописать, что все по дефолту -1
-            }
-            else
-            {
-                int int_arg = atoi(arg);
-                code[ip++] = (double) int_arg;
-            }
-            
-            
-            
-            
-            
-            
-            
-            //code[ip++] = (double) arg;
+            arg[len_arg - 1] = '\0';
+            int ind = atoi(arg);
 
-            //counter_comand++;
+            code[ip++] = lables->arr[ind]; // В ctor прописать, что все по дефолту -1
 
             continue;
         }
 
         if (strcmp(command, "HLT") == 0)
         {
-            //fprintf(file_code, "%d \n", HLT);
             code[ip++] = HLT;
-
-            //counter_comand++;
 
             break;  // ЭТО ПЛОХО!!! НИЖЕ ЭТОЙ СТРОКИ НЕ ПРОЧИТАЕТ!!!! Надо сделать пока не EOF
         }
         
     }
+    fclose(file_asm);
 
     return ip;
-
-    //fseek(file_code, 0L, SEEK_SET );
-    //fprintf(file_code, "%d \n", counter_comand);
 }
 
 
@@ -415,6 +317,17 @@ void print_code(double code[], size_t size_code)
     printf("\n");
 }
 
+
+void code_output_file(double code[], size_t size_code)
+{
+    FILE* file_code = fopen("program_code.txt", "w");
+
+    for (size_t i = 0; i < size_code; i++)
+    {
+        fprintf(file_code, "%lg ", code[i]);
+    }
+    printf("\n");
+}
 
 
 
