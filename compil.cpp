@@ -36,9 +36,24 @@ enum MashineCode
 };
 
 const size_t MAX_CODE_SIZE = 10000;
+const size_t MAX_NAME_MARK_SIZE = 10;
+const size_t MAX_MARK_MASS_SIZE = 10;
+
+struct Mark
+{
+    char name[MAX_NAME_MARK_SIZE];
+    int number_comand;
+};
+
+struct Labels
+{
+    //Mark arr[MAX_MARK_MASS_SIZE];
+    int arr[MAX_MARK_MASS_SIZE];
+    size_t size;
+};
 
 // void run_compil(int argc, const char *argv[], double code[]);
-int code_put(int argc, const char *argv[], double code[]); // Он заполняет!
+int code_put(int argc, const char *argv[], double code[], Labels* lables); // Он заполняет!
 void print_code(double code[], size_t size_code);
 void code_output_file(int argc, const char *argv[], double code[], size_t size);
 
@@ -48,7 +63,8 @@ void code_output_file(int argc, const char *argv[], double code[], size_t size);
 int main(int argc, const char *argv[])
 {
     double code[MAX_CODE_SIZE]; // В этом файле все StackElem_t заменены на double 
-    size_t size = (size_t) code_put(argc, argv, code);
+    Labels labels = {};
+    size_t size = (size_t) code_put(argc, argv, code, &labels);
     print_code(code, size);
     code_output_file(argc, argv, code, size);
     
@@ -135,20 +151,7 @@ void code_output_file(int argc, const char *argv[], double code[], size_t size)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-int code_put(int argc, const char *argv[], double code[])
+int code_put(int argc, const char *argv[], double code[], Labels* lables)
 {
     FILE* file_asm = NULL;
     //printf("%p - uk1\n", file_code);
@@ -170,12 +173,34 @@ int code_put(int argc, const char *argv[], double code[])
     //int counter_comand = 0;
     while (true)   // ЭТО ПЛОХО!!! НИЖЕ HLT СТРОКИ НЕ ПРОЧИТАЕТ!!!! Надо сделать пока не EOF
     {
+
         //printf("BBBBBBBBBBBBBBBBBB\n");
         char command[50] = {};
         printf("%p - uk\n", file_asm);
-        fscanf(file_asm, "%s", command); // При чтении меток, этот съест всю строку. Как-то проверить, что последний символ ":"
+        fscanf(file_asm, "%s", command); // При чтении меток (где они объявляются), этот съест всю строку. Как-то проверить, что последний символ ":"
         //printf("%s - res\n", command);
         //printf("CCCCC\n");
+        size_t len_str = strlen(command);
+
+        if (command[len_str - 1] == ':') 
+        {
+            //printf("AAASDASASDASDASDASDAD:::::::\n");
+            command[len_str - 1] = '\0';
+            int ind = atoi(command);
+
+            lables->arr[ind] = ip; // так как в маш коде она же пропадает...
+            lables->size++;
+
+
+
+            // // перевод строки "num:" в число num (ИЛИ можно ли как-то сделать срез?)
+            // int num = 0;
+            // for (size_t i = 0; i < len_str; i++)
+            // {
+
+            // }
+            continue;
+        }
 
         if (strcmp(command, "PUSH") == 0)
         {
@@ -283,15 +308,31 @@ int code_put(int argc, const char *argv[], double code[])
 
         if (strcmp(command, "JUMP") == 0)
         {
-            //fprintf(file_code, "%d ", JUMP);
             code[ip++] = JUMP;
 
-            int arg = 0;
-            fscanf(file_asm, "%d", &arg);
-            //fprintf(file_code, "%d \n", arg);
-            code[ip++] = (double) arg;
+            // int arg = 0;
+            // fscanf(file_asm, "%d", &arg);
+            // code[ip++] = (double) arg;
 
-            //counter_comand++;
+            char arg[MAX_NAME_MARK_SIZE] = "";
+            fscanf(file_asm, "%s", arg);
+
+            // Тут можно сделать формат буквы/цифры и от этого работать. (Как в push, например) (НО когда это метка - буквами)
+            size_t len_arg = strlen(arg);
+            if (arg[len_arg - 1] == ':')
+            {
+                arg[len_arg - 1] = '\0';
+                int ind = atoi(arg);
+
+                code[ip++] = lables->arr[ind]; // В ctor прописать, что все по дефолту -1
+            }
+            else
+            {
+                int int_arg = atoi(arg);
+                code[ip++] = (double) int_arg;
+            }
+            
+
 
             continue;
         }
@@ -301,10 +342,36 @@ int code_put(int argc, const char *argv[], double code[])
             //fprintf(file_code, "%d ", JA);
             code[ip++] = JA;
 
-            int arg = 0;
-            fscanf(file_asm, "%d", &arg);
+            // int arg = 0;
+            // fscanf(file_asm, "%d", &arg);
+            
             //fprintf(file_code, "%d \n", arg);
-            code[ip++] = (double) arg;
+            
+            char arg[MAX_NAME_MARK_SIZE] = "";
+            fscanf(file_asm, "%s", arg);
+
+            // Тут можно сделать формат буквы/цифры и от этого работать. (Как в push, например) (НО когда это метка - буквами)
+            size_t len_arg = strlen(arg);
+            if (arg[len_arg - 1] == ':')
+            {
+                arg[len_arg - 1] = '\0';
+                int ind = atoi(arg);
+
+                code[ip++] = lables->arr[ind]; // В ctor прописать, что все по дефолту -1
+            }
+            else
+            {
+                int int_arg = atoi(arg);
+                code[ip++] = (double) int_arg;
+            }
+            
+            
+            
+            
+            
+            
+            
+            //code[ip++] = (double) arg;
 
             //counter_comand++;
 
@@ -320,6 +387,7 @@ int code_put(int argc, const char *argv[], double code[])
 
             break;  // ЭТО ПЛОХО!!! НИЖЕ ЭТОЙ СТРОКИ НЕ ПРОЧИТАЕТ!!!! Надо сделать пока не EOF
         }
+        
     }
 
     return ip;
