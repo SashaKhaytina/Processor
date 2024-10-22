@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "Stack/stack_commands.h"
 #include "Stack/errors.h"
@@ -31,10 +32,12 @@ enum MashineCode
     MUL = 3, 
     OUT = 4, // ыыыы
     JUMP = 5,
-    JA = 6 // TODO: make in
+    JA = 6, // TODO: make in
+    IN = 7
 };
 
 const size_t MAX_CODE_SIZE = 10000;
+const int STOP_PROGRAMM = -1;
 
 
 struct SPU
@@ -46,17 +49,17 @@ struct SPU
 };
 
 
-size_t read_file_code(int argc, const char *argv[], SPU* proc);
+size_t read_file_code(SPU* proc);
 void doing_code      (SPU* proc);
 void print_code      (StackElem_t code[], size_t size_code);
 
 
 
-int main(int argc, const char *argv[]) // флаги мешают (или нет...)
+int main() // флаги мешают (или нет...)
 {
     // StackElem_t code[MAX_CODE_SIZE] = {};
     SPU proc = {};
-    size_t size_code = read_file_code(argc, argv, &proc);
+    size_t size_code = read_file_code(&proc);
 
     print_code(proc.code, size_code);
 
@@ -79,80 +82,115 @@ void doing_code(SPU* proc)
     bool continue_process = true;
     while (continue_process)
     {
-        //print_stack_info(&proc->stack, OK);
+        // print_stack_info(&proc->stack, OK);
         MashineCode command = (MashineCode) proc->code[proc->ip];
         switch (command)
         {
         case PUSH: 
-            {StackElem_t arg = proc->code[(++(proc->ip))++]; // TODO: pizdec nahui
+        {
+            StackElem_t arg = proc->code[(++(proc->ip))++]; // TODO: pizdec nahui
             stack_push(&proc->stack, arg);
-            break;}
+            break;
+        }
 
         case PUSHR: // Должен класть в стек то, что в регистре
-            {int arg = proc->code[(++(proc->ip))++];
+        {
+            proc->ip++;
+            int arg = (int) proc->code[proc->ip++];
             stack_push(&proc->stack, proc->registers[arg]);
-            break;}
+            break;
+        }
         
         case POP:  // Кладет в регистр последний элемент стека 
-            {int arg = proc->code[(++(proc->ip))++];
+        {
+            proc->ip++;
+            int arg = (int) proc->code[proc->ip++];
 
             proc->registers[arg] = (&proc->stack)->arr[(&proc->stack)->size-1];
             stack_pop(&proc->stack);
-            break;}
+            break;
+        }
         
         case ADD:
-            {proc->ip++;
+        {
+            proc->ip++;
             StackElem_t elem = (&proc->stack)->arr[(&proc->stack)->size-1] + (&proc->stack)->arr[(&proc->stack)->size-2]; // Рассчитываем
             stack_pop(&proc->stack); // Удаляем
             stack_pop(&proc->stack); // Удаляем
 
             stack_push(&proc->stack, elem); // Добавляем
-            break;}
+            break;
+        }
         
         case SUB:
-            {proc->ip++;
+        {
+            proc->ip++;
             StackElem_t elem = (&proc->stack)->arr[(&proc->stack)->size-1] - (&proc->stack)->arr[(&proc->stack)->size-2]; // Рассчитываем
             stack_pop(&proc->stack); // Удаляем
             stack_pop(&proc->stack); // Удаляем
 
             stack_push(&proc->stack, elem); // Добавляем
-            break;}
+            break;
+        }
 
         case MUL:
-            {proc->ip++;
+        {
+            proc->ip++;
             StackElem_t elem = (&proc->stack)->arr[(&proc->stack)->size-1] * (&proc->stack)->arr[(&proc->stack)->size-2]; // Рассчитываем
             stack_pop(&proc->stack); // Удаляем
             stack_pop(&proc->stack); // Удаляем
 
             stack_push(&proc->stack, elem); // Добавляем
-            break;}
+            break;
+        }
 
         case OUT: // Он должен вытащить еще 
-            {proc->ip++;
+        {
+            proc->ip++;
 
             printf("%g - это результат\n", (&proc->stack)->arr[(&proc->stack)->size-1]);
             stack_pop(&proc->stack);
-            //printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
-            break;}
+            break;
+        }
+        
+        case IN: // push в стек то, что вводим с клавиатуры
+        {
+            proc->ip++;
+
+            StackElem_t arg = 0;
+            printf("Введите число: \n");
+            scanf("%lg", &arg);
+            
+            stack_push(&proc->stack, arg);
+            break;
+        }
 
         case JUMP:
-            {proc->ip = (int) proc->code[++(proc->ip)];
-            break;}
+        {
+            proc->ip = (size_t) proc->code[++(proc->ip)];
+            break;
+        }
         
         case JA:
-            {if ((&proc->stack)->arr[(&proc->stack)->size-2] > (&proc->stack)->arr[(&proc->stack)->size-1]) proc->ip = proc->code[++(proc->ip)];
+        {
+            if ((&proc->stack)->arr[(&proc->stack)->size-2] > (&proc->stack)->arr[(&proc->stack)->size-1]) proc->ip = (size_t) proc->code[++(proc->ip)];
             else proc->ip += 2;
-            break;}
+            break;
+        }
         
         case HLT:
-            {proc->ip++;
+        {
+            proc->ip++;
             printf("Закончили\n");
             continue_process = false;
-            break;}
+            break;
+        }
         
         default:
             break;
         }
+
+        // print_stack_info(&proc->stack, OK);
 
     }
 }
@@ -189,7 +227,7 @@ void doing_code(SPU* proc)
 
 
 
-size_t read_file_code(int argc, const char *argv[], SPU* proc)
+size_t read_file_code(SPU* proc)
 {
     FILE* file_code = NULL;
     file_code = fopen("program_code.txt", "r");
@@ -216,63 +254,93 @@ size_t read_file_code(int argc, const char *argv[], SPU* proc)
         switch (command)
         {
         case PUSH:
-            {proc->code[proc->ip++] = PUSH; // TODO: you do that in every case
+            {
+            proc->code[proc->ip++] = PUSH; // TODO: you do that in every case
             StackElem_t arg = 0;
             fscanf(file_code, "%lg", &arg);
             proc->code[proc->ip++] = arg;
-            break;}
+            break;
+            }
 
         case PUSHR: // Должен класть в стек то, что в регистре
-            {proc->code[proc->ip++] = PUSHR; 
+            {
+            proc->code[proc->ip++] = PUSHR; 
             StackElem_t arg = 0; // Тут индекс регистра (он должен быть int..). ОН УЖЕ ЧИСЛО!!! (его ассемблер сделал числом)
-            fscanf(file_code, "%d", &arg); // TODO: why here %d, and in others %lg
+            fscanf(file_code, "%lg", &arg); // TODO: why here %d, and in others %lg
             proc->code[proc->ip++] = arg;
-            break;}
+            break;
+            }
         
         case POP:  // Кладет в регистр последний элемент стека 
-            {proc->code[proc->ip++] = POP; 
+            {
+            proc->code[proc->ip++] = POP; 
             StackElem_t arg = 0; // Тут индекс регистра. ОН УЖЕ ЧИСЛО!!! (его ассемблер сделал числом)
             fscanf(file_code, "%lg", &arg);
             proc->code[proc->ip++] = arg;
-            break;}
+            break;
+            }
         
         case ADD:
-            {proc->code[proc->ip++] = ADD;
-            break;}
+            {
+            proc->code[proc->ip++] = ADD;
+            break;
+            }
         
         case SUB:
-            {proc->code[proc->ip++] = SUB;
-            break;}
+            {
+            proc->code[proc->ip++] = SUB;
+            break;
+            }
 
         case MUL:
-            {proc->code[proc->ip++] = MUL;
-            break;}
+            {
+            proc->code[proc->ip++] = MUL;
+            break;
+            }
 
         case OUT:
-            {proc->code[proc->ip++] = OUT;
-            break;}
+            {
+            proc->code[proc->ip++] = OUT;
+            break;
+            }
+        
+        case IN:
+            {
+            proc->code[proc->ip++] = IN;
+            break;
+            }
         
         case JUMP:
-            {proc->code[proc->ip++] = JUMP;
+            {
+            proc->code[proc->ip++] = JUMP;
             int arg = 0;
             fscanf(file_code, "%d", &arg);
             proc->code[proc->ip++] = arg;
-            break;}
+            break;
+            }
         
         case JA:
-            {proc->code[proc->ip++] = JA;
+            {
+            proc->code[proc->ip++] = JA;
             int arg = 0;
             fscanf(file_code, "%d", &arg);
             proc->code[proc->ip++] = arg;
-            break;}
+            break;
+            }
         
         case HLT:
-            {proc->code[proc->ip++] = HLT;
+            {
+            proc->code[proc->ip++] = HLT;
             continue_process = false;  // Из switch можно как-то остановить внешний цикл? (break занят, получается)
-            break;}
+            break;
+            }
         
         default: // TODO: if you don't want to move proc->code... from switch, you should print here an error
+        {
+            printf("В машинном коде что-то не то. Программа заканчивает выполнение\n");
+            exit(STOP_PROGRAMM); // что тут писать...
             break;
+        }
         }
 
     }

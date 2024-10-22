@@ -34,11 +34,12 @@ enum MashineCode
     MUL = 3, 
     OUT = 4, // ыыыы
     JUMP = 5,
-    JA = 6
+    JA = 6,
+    IN = 7
 };
 
 const size_t MAX_CODE_SIZE = 10000;
-const size_t MAX_NAME_LABEL_SIZE = 10; // TODO: it's label
+const size_t MAX_NAME_LABEL_SIZE = 50; // TODO: it's label
 const size_t MAX_MARK_MASS_SIZE = 10;
 const size_t MAX_COMAND_SIZE = 50;
 
@@ -50,23 +51,33 @@ struct Label
 
 struct Labels
 {
-    //Mark arr[MAX_MARK_MASS_SIZE];
-    int arr[MAX_MARK_MASS_SIZE];
+    Label arr[MAX_MARK_MASS_SIZE];
+    //int arr[MAX_MARK_MASS_SIZE];
     size_t size;
 };
 
 // void run_compil(int argc, const char *argv[], double code[]);
-int code_put(int argc, const char *argv[], double code[], Labels* lables); // Он заполняет!
-void print_code(double code[], size_t size_code);
 //void code_output_file(int argc, const char *argv[], double code[], size_t size);
+
+void labels_ctor(Labels* labels);
+
+int code_put(int argc, const char *argv[], double code[], Labels* labels); // Он заполняет!
+void print_code(double code[], size_t size_code);
 void code_output_file(double code[], size_t size_code);
 
+
+void create_new_label(Labels* labels, char label_name[], int ip);
+void push_command(char arg[], double code[], int* ip);
+void pop_command(char arg[], double code[], int* ip);
+int  find_label_ip(Labels* labels, char label_name[]);
+IndexRegistrs definition_index_of_register(char arg[]);
 
 
 int main(int argc, const char *argv[])
 {
     double code[MAX_CODE_SIZE] = {}; // В этом файле все StackElem_t заменены на double 
     Labels labels = {};
+    labels_ctor(&labels);
     size_t size = (size_t) code_put(argc, argv, code, &labels);
     print_code(code, size);
     code_output_file(code, size);
@@ -154,7 +165,7 @@ void code_output_file(int argc, const char *argv[], double code[], size_t size)
 */
 
 
-int code_put(int argc, const char *argv[], double code[], Labels* lables)
+int code_put(int argc, const char *argv[], double code[], Labels* labels)
 {
     FILE* file_asm = NULL;
     int ip = 0;
@@ -169,23 +180,22 @@ int code_put(int argc, const char *argv[], double code[], Labels* lables)
         file_asm = fopen("program_asm.txt", "r");
     }
 
-    while (true)   // ЭТО ПЛОХО!!! НИЖЕ HLT СТРОКИ НЕ ПРОЧИТАЕТ!!!! Надо сделать пока не EOF
+    while (true)
     {
-
         char command[MAX_COMAND_SIZE] = {};
-        printf("%p - uk\n", file_asm);
-        fscanf(file_asm, "%s", command); // При чтении меток (где они объявляются), этот съест всю строку. Как-то проверить, что последний символ ":"
+        // printf("%p - uk\n", file_asm);
+        // printf("%s - имя первой метки\n", labels->arr[0].name);
+        if (fscanf(file_asm, "%s", command) == EOF) break;
         // if (fscanf(file_asm, "%s:", command) == 0) // TODO: try to use that
 
         size_t len_str = strlen(command);
 
-        if (command[len_str - 1] == ':') 
+         if (command[len_str - 1] == ':')
+        //if (fscanf(file_asm, "%s:", command) == 0) 
         {
             command[len_str - 1] = '\0';
-            int ind = atoi(command);
 
-            lables->arr[ind] = ip; // так как в маш коде она же пропадает...
-            lables->size++; // TODO: why lables
+            create_new_label(labels, command, ip);
 
             continue;
         }
@@ -193,24 +203,10 @@ int code_put(int argc, const char *argv[], double code[], Labels* lables)
         if (strcmp(command, "PUSH") == 0)
         {
 
-            char arg[10] = {};
+            char arg[MAX_NAME_LABEL_SIZE] = {}; // немного странно использовать эту константу здесь
             fscanf(file_asm, "%s", arg);
-            if (isdigit(arg[0]))
-            {
-                code[ip++] = PUSH;
-                code[ip++] = atof(arg); // TODO: use atof
 
-            }
-            else
-            {
-                code[ip++] = PUSHR;
-
-                if      (strcmp(arg, "RAX") == 0) code[ip++] = RAX; // ТУТ ДОЛЖЕН БЫТЬ if С ПРОВЕРКОЙ, что это за регистр
-                else if (strcmp(arg, "RBX") == 0) code[ip++] = RBX;
-                else if (strcmp(arg, "RCX") == 0) code[ip++] = RCX;
-                else if (strcmp(arg, "RDX") == 0) code[ip++] = RDX;
-                else if (strcmp(arg, "REX") == 0) code[ip++] = REX;
-            }
+            push_command(arg, code, &ip);
 
             continue;
         }
@@ -222,16 +218,10 @@ int code_put(int argc, const char *argv[], double code[], Labels* lables)
             char arg[10] = {};
             fscanf(file_asm, "%s", arg);
 
-            if      (strcmp(arg, "RAX") == 0) code[ip++] = RAX; // ТУТ ДОЛЖЕН БЫТЬ if С ПРОВЕРКОЙ, что это за регистр
-            else if (strcmp(arg, "RBX") == 0) code[ip++] = RBX;
-            else if (strcmp(arg, "RCX") == 0) code[ip++] = RCX;
-            else if (strcmp(arg, "RDX") == 0) code[ip++] = RDX;
-            else if (strcmp(arg, "REX") == 0) code[ip++] = REX;
+            pop_command(arg, code, &ip);
 
             continue;
         }
-
-        
 
         if (strcmp(command, "ADD") == 0)
         {
@@ -257,6 +247,12 @@ int code_put(int argc, const char *argv[], double code[], Labels* lables)
             continue;
         }
 
+        if (strcmp(command, "IN") == 0)
+        {
+            code[ip++] = IN;
+            continue;
+        }
+
         if (strcmp(command, "JUMP") == 0)
         {
             code[ip++] = JUMP;
@@ -264,14 +260,7 @@ int code_put(int argc, const char *argv[], double code[], Labels* lables)
             char arg[MAX_NAME_LABEL_SIZE] = "";
             fscanf(file_asm, "%s", arg);
 
-            // Тут можно сделать формат буквы/цифры и от этого работать. (Как в push, например) (НО когда это метка - буквами)
-            size_t len_arg = strlen(arg);
-
-            arg[len_arg - 1] = '\0';
-            int ind = atoi(arg);
-
-            code[ip++] = lables->arr[ind]; // В ctor прописать, что все по дефолту -1
-
+            code[ip++] = find_label_ip(labels, arg);
 
             continue;
         }
@@ -283,13 +272,7 @@ int code_put(int argc, const char *argv[], double code[], Labels* lables)
             char arg[MAX_NAME_LABEL_SIZE] = "";
             fscanf(file_asm, "%s", arg);
 
-            // Тут можно сделать формат буквы/цифры и от этого работать. (Как в push, например) (НО когда это метка - буквами)
-            size_t len_arg = strlen(arg);
-
-            arg[len_arg - 1] = '\0';
-            int ind = atoi(arg);
-
-            code[ip++] = lables->arr[ind]; // В ctor прописать, что все по дефолту -1
+            code[ip++] = find_label_ip(labels, arg);
 
             continue;
         }
@@ -298,7 +281,8 @@ int code_put(int argc, const char *argv[], double code[], Labels* lables)
         {
             code[ip++] = HLT;
 
-            break;  // ЭТО ПЛОХО!!! НИЖЕ ЭТОЙ СТРОКИ НЕ ПРОЧИТАЕТ!!!! Надо сделать пока не EOF
+            //break;  // ЭТО ПЛОХО!!! НИЖЕ ЭТОЙ СТРОКИ НЕ ПРОЧИТАЕТ!!!! Надо сделать пока не EOF
+            continue;
         }
         
     }
@@ -330,11 +314,67 @@ void code_output_file(double code[], size_t size_code)
 }
 
 
+void create_new_label(Labels* labels, char label_name[], int ip)
+{
+    for (size_t i = 0; i < MAX_COMAND_SIZE; i++)
+    {
+        labels->arr[labels->size].name[i] = label_name[i];
+    }
+    labels->arr[labels->size].number_comand = ip;
+    labels->size++;
+}
 
 
+void push_command(char arg[], double code[], int* ip)
+{
+    if (isdigit(arg[0]))
+    {
+        code[(*ip)++] = PUSH;
+        code[(*ip)++] = atof(arg);
+    }
+    else
+    {
+        code[(*ip)++] = PUSHR;
+        code[(*ip)++] = definition_index_of_register(arg);
+    }
+}
 
 
+void pop_command(char arg[], double code[], int* ip)
+{
+    code[(*ip)++] = definition_index_of_register(arg);
+}
 
+
+int  find_label_ip(Labels* labels, char label_name[])
+{
+    for (size_t i = 0; i < labels->size; i++)
+    {
+        if (strcmp(label_name, labels->arr[i].name) == 0) return labels->arr[i].number_comand;
+    }
+    return -1;
+}
+
+
+IndexRegistrs definition_index_of_register(char arg[])
+{
+    if      (strcmp(arg, "RAX") == 0) return RAX; // ТУТ ДОЛЖЕН БЫТЬ if С ПРОВЕРКОЙ, что это за регистр
+    else if (strcmp(arg, "RBX") == 0) return RBX;
+    else if (strcmp(arg, "RCX") == 0) return RCX;
+    else if (strcmp(arg, "RDX") == 0) return RDX;
+    else if (strcmp(arg, "REX") == 0) return REX;
+    return RAX; // нуууууууу
+}
+
+
+void labels_ctor(Labels* labels)
+{
+    for (size_t i = 0; i < MAX_MARK_MASS_SIZE; i++)
+    {
+        // Надо ли что-то делать с именем?
+        labels->arr[i].number_comand = -1;
+    }
+}
 
 
 
