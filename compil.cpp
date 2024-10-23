@@ -11,6 +11,13 @@
 #include <ctype.h>
 
 // Должен переводить файл слов (асемблер) в файл с маш кодом (файл с цифрами)
+// в битовом формате принципиально в каком типе вводишь и читаешь?.....
+
+enum ArgType
+{
+    REGISTR = 1 << 0,
+    NUMBER = 1 << 1
+};
 
 enum IndexRegistrs 
 {
@@ -67,10 +74,15 @@ void code_output_file(double code[], size_t size_code);
 
 
 void create_new_label(Labels* labels, char label_name[], int ip);
-void push_command(char arg[], double code[], int* ip);
+// void push_command(char arg[], double code[], int* ip);
+void push_command(FILE* file_asm, double code[], int* ip);
 void pop_command(char arg[], double code[], int* ip);
 int  find_label_ip(Labels* labels, char label_name[]);
 IndexRegistrs definition_index_of_register(char arg[]);
+
+void push_reg_in_code(FILE* file_asm, int arg, double code[], int* ip);
+void push_num_in_code(FILE* file_asm, int arg, double code[], int* ip);
+
 
 
 int main(int argc, const char *argv[])
@@ -202,11 +214,29 @@ int code_put(int argc, const char *argv[], double code[], Labels* labels)
 
         if (strcmp(command, "PUSH") == 0)
         {
+            printf("AAAA\n");
+            // int arg = 0;
+            // fscanf(file_asm, "%d", arg);
 
-            char arg[MAX_NAME_LABEL_SIZE] = {}; // немного странно использовать эту константу здесь
-            fscanf(file_asm, "%s", arg);
 
-            push_command(arg, code, &ip);
+            
+            // char arg[MAX_NAME_LABEL_SIZE] = {}; // немного странно использовать эту константу здесь
+            // fscanf(file_asm, "%s", arg);
+
+            code[ip++] = PUSH;
+            //code[ip++] = (double) arg; // это нк тут, тк это не аргумент
+            // Здесь arg - битовая фигня
+
+            // char which_push[2 * MAX_NAME_LABEL_SIZE + 1] = {}; // стал вообще треш какой-то
+            // // fscanf(file_asm, "%s", which_push);
+            // char c = fgetc(file_asm);
+            // for (int i = 0; c = fgetc(file_asm) != '\n'; i++)
+            // {
+            //     which_push[i] = c;
+            // }
+
+            //push_command(arg, code, &ip);
+            push_command(file_asm, code, &ip);
 
             continue;
         }
@@ -325,19 +355,183 @@ void create_new_label(Labels* labels, char label_name[], int ip)
 }
 
 
-void push_command(char arg[], double code[], int* ip)
+// void push_command(char arg[], double code[], int* ip)
+// {
+//     if (isdigit(arg[0]))
+//     {
+//         code[(*ip)++] = PUSH;
+//         code[(*ip)++] = atof(arg);
+//     }
+//     else
+//     {
+//         code[(*ip)++] = PUSHR;
+//         code[(*ip)++] = definition_index_of_register(arg);
+//     }
+// }
+
+
+
+
+// void push_command(FILE* file_asm, int arg, double code[], int* ip)
+// {
+//     if (arg & 3 == 3) // есть сложение
+//     {
+//         // ПУСТЬ ЕСТЬ СТРУКТУРА: RAX + num
+
+//         // char which_register_push[MAX_COMAND_SIZE] = {}; // константа странная. Тут должно быть колво регистров
+//         // fscanf(file_asm, "%s", which_register_push);
+//         // code[(*ip)++] = definition_index_of_register(which_register_push);
+//         push_reg_in_code(file_asm, arg, code, ip);
+
+//         fscanf(file_asm, "%s"); // +
+
+//         // double which_num_push = 0;
+//         // fscanf(file_asm, "%lf", &which_num_push);
+//         // code[(*ip)++] = which_num_push;
+//         push_num_in_code(file_asm, arg, code, ip);
+//     }
+//     else if (arg & 2 == 2)
+//     {
+//         // double which_push = 0;
+//         // fscanf(file_asm, "%lf", &which_push);
+//         // code[(*ip)++] = which_push;
+//         push_num_in_code(file_asm, arg, code, ip);
+//     }
+//     else
+//     {
+//         // char which_push[MAX_NAME_LABEL_SIZE] = {};
+//         // fscanf(file_asm, "%s", which_push);
+//         // code[(*ip)++] = definition_index_of_register(which_push);
+//         push_reg_in_code(file_asm, arg, code, ip);
+//     }
+// }
+
+
+// void push_reg_in_code(FILE* file_asm, int arg, double code[], int* ip)
+// {
+//     char which_push[MAX_NAME_LABEL_SIZE] = {};
+//     fscanf(file_asm, "%s", which_push);
+//     code[(*ip)++] = definition_index_of_register(which_push);
+// }
+
+
+// void push_num_in_code(FILE* file_asm, int arg, double code[], int* ip)
+// {
+//     double which_push = 0;
+//     fscanf(file_asm, "%lf", &which_push);
+//     code[(*ip)++] = which_push;
+// }
+
+
+
+
+
+
+// нафиг.
+void push_command(FILE* file_asm, double code[], int* ip)
 {
-    if (isdigit(arg[0]))
+    // Пришла строка. Там может быть число, может быть регистр, а может быть сумма
+    // можем найти +, а потом запустить функцию выше (которая в комментах) (она по сути определяет тип элемента)
+    // Нет. Элементы должны идти в определенном!!! порядке. 
+    // Но мы же можем их просто переставить, если нужно, в той же функции выше.
+
+
+    // rfgtw ghjcnj rfgtw////
+    // Депрессия. ОНО НЕ ДОПИСАНО!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    printf("BBBB\n");
+
+    char which_push[2 * MAX_NAME_LABEL_SIZE + 1] = {}; // стал вообще треш какой-то
+    // fscanf(file_asm, "%s", which_push);
+
+    bool is_summ = false;
+    int ind_new_slag = 0;
+
+    char c = fgetc(file_asm); //пропустить пробел
+    c = fgetc(file_asm);
+
+    //char c = fgetc(file_asm); // пропустить пробел после 2-ого аргумента
+    for (int i = 0; c != '\n'; i++)
+    {   
+        printf("%c - c\n", c);
+        // if (c == ' ') // Это вообще... что.. это надо? у нас тогда индекс собьется аоаоаоаоаоаоааооаоаоаа (rax +_4) тут конец строка. За чтооооооооооо
+        // {
+        //     which_push[i] = '\0';
+        //     continue;
+        // } 
+        
+        if (c == '+')
+        {
+            which_push[i] = '\0';
+            is_summ = true;
+            ind_new_slag = i + 1;
+            c = fgetc(file_asm);
+            continue;
+        }
+
+        which_push[i] = c;
+        c = fgetc(file_asm);
+    }
+    
+    
+    // Надо определить что это.
+    // ищем +
+    if (is_summ) // значит + есть...
     {
-        code[(*ip)++] = PUSH;
-        code[(*ip)++] = atof(arg);
+        code[(*ip)++] = REGISTR + NUMBER;
+        // разделить!!! (на 2 слагаемых)
+        // массив вида ["N", "A", "M", "E", "\0", "N"....]
+        //                                         ^ - тут может быть пробел
+        // ПУСТЬ НИКАКИХ ПРОБЕЛОВ. СТРУКТУРА: RAX+num
+        // Рядом с цифрой пробелы допустимы (из-за работы atof), а рядом с названием регистра - нет (будет всегда RAX по дефолту)
+
+        code[(*ip)++] = definition_index_of_register(which_push);
+
+        code[(*ip)++] = atof(which_push + ind_new_slag);
+
+
     }
     else
     {
-        code[(*ip)++] = PUSHR;
-        code[(*ip)++] = definition_index_of_register(arg);
+        printf("%s - which_push\n", which_push);
+        if (isdigit(which_push[0]))
+        {
+            code[(*ip)++] = NUMBER;
+            code[(*ip)++] = atof(which_push);
+        }
+        else
+        {
+            code[(*ip)++] = REGISTR;
+            code[(*ip)++] = definition_index_of_register(which_push);
+        }
     }
+
+
+
+
+    // Это плохо. Не сработает, так как в arg лежит только до пробела.
+    // // Надо определить что это.
+    // // ищем +
+    // char* point_on_plus = strchr(arg,'+');
+    // if (point_on_plus != NULL) // значит + есть...
+    // {
+    //     // разделить!!! (на 2 слагаемых)
+
+    // }
+    // else
+    // {
+    //     if (isdigit(arg[0]))
+    //     {
+    //         code[(*ip)++] = atof(arg);
+    //     }
+    //     else
+    //     {
+    //         code[(*ip)++] = definition_index_of_register(arg);
+    //     }
+    // }
+
 }
+
+
 
 
 void pop_command(char arg[], double code[], int* ip)

@@ -12,6 +12,12 @@
 
 // Должен переводить файл с маш кодом (файл с цифрами) в массив и выполняться 
 
+enum ArgType
+{
+    REGISTR = 1 << 0,
+    NUMBER = 1 << 1
+};
+
 enum IndexRegistrs // Это не сюда, это в ассемблер
 {
     RAX,
@@ -86,23 +92,44 @@ void doing_code(SPU* proc)
         MashineCode command = (MashineCode) proc->code[proc->ip];
         switch (command)
         {
+        // case PUSH: 
+        // {
+        //     StackElem_t arg = proc->code[(++(proc->ip))++]; // TODO: pizdec nahui
+        //     stack_push(&proc->stack, arg);
+        //     break;
+        // }
+
+        // case PUSHR: // Должен класть в стек то, что в регистре
+        // {
+        //     proc->ip++;
+        //     int arg = (int) proc->code[proc->ip++];
+        //     stack_push(&proc->stack, proc->registers[arg]);
+        //     break;
+        // }
+
         case PUSH: 
         {
-            StackElem_t arg = proc->code[(++(proc->ip))++]; // TODO: pizdec nahui
-            stack_push(&proc->stack, arg);
-            break;
-        }
+            // printf("AAA\n");
+            int bit_arg = proc->code[(++(proc->ip))++]; // TODO: pizdec nahui 
+                                                        // согласна
+            StackElem_t which_push = 0;
+            
+            if (bit_arg & REGISTR) // регистр
+            {
+                which_push += proc->registers[(int) proc->code[proc->ip++]];
+            }
+            if (bit_arg & NUMBER) // число .............
+            {
+                which_push += proc->code[proc->ip++];
+            }
 
-        case PUSHR: // Должен класть в стек то, что в регистре
-        {
-            proc->ip++;
-            int arg = (int) proc->code[proc->ip++];
-            stack_push(&proc->stack, proc->registers[arg]);
+            stack_push(&proc->stack, which_push);
             break;
         }
         
         case POP:  // Кладет в регистр последний элемент стека 
         {
+            //printf("POP\n");
             proc->ip++;
             int arg = (int) proc->code[proc->ip++];
 
@@ -190,7 +217,7 @@ void doing_code(SPU* proc)
             break;
         }
 
-        // print_stack_info(&proc->stack, OK);
+        //print_stack_info(&proc->stack, OK);
 
     }
 }
@@ -247,32 +274,63 @@ size_t read_file_code(SPU* proc)
     bool continue_process = true;
     while (continue_process)
     {
+        //printf("234567890987\n");//...........................g
         int command = 0;
         fscanf(file_code, "%d", &command);
         printf("%d ", command);
 
         switch (command)
         {
+        // case PUSH:
+        //     {
+        //     proc->code[proc->ip++] = PUSH; // TODO: you do that in every case
+        //     StackElem_t arg = 0;
+        //     fscanf(file_code, "%lg", &arg);
+        //     proc->code[proc->ip++] = arg;
+        //     break;
+        //     }
+
+        // case PUSHR: // Должен класть в стек то, что в регистре
+        //     {
+        //     proc->code[proc->ip++] = PUSHR; 
+        //     StackElem_t arg = 0; // Тут индекс регистра (он должен быть int..). ОН УЖЕ ЧИСЛО!!! (его ассемблер сделал числом)
+        //     fscanf(file_code, "%lg", &arg); // TODO: why here %d, and in others %lg
+        //     proc->code[proc->ip++] = arg;
+        //     break;
+        //     }
+
         case PUSH:
             {
+            //    printf("PUSH_______\n"); // че за ........ вапвавоповпьвокпиовкаопворапдовапивоапирвиапдивопивиприваипрвкиапривапвдапив
             proc->code[proc->ip++] = PUSH; // TODO: you do that in every case
-            StackElem_t arg = 0;
-            fscanf(file_code, "%lg", &arg);
-            proc->code[proc->ip++] = arg;
-            break;
+            int bit_arg = 0;
+            fscanf(file_code, "%d", &bit_arg);
+            proc->code[proc->ip++] = bit_arg;
+            //printf("%d - bit_arg\n", bit_arg);
+
+            if (bit_arg & REGISTR) // регистр
+            {
+                //printf("AASASASDASAFSDFSDFSDFS\n");
+                StackElem_t arg = 0;
+                fscanf(file_code, "%lg", &arg); 
+                proc->code[proc->ip++] = arg;
+            }
+            if (bit_arg & NUMBER) // число .............
+            {
+                StackElem_t arg = 0;
+                fscanf(file_code, "%lg", &arg); 
+                proc->code[proc->ip++] = arg;
             }
 
-        case PUSHR: // Должен класть в стек то, что в регистре
-            {
-            proc->code[proc->ip++] = PUSHR; 
-            StackElem_t arg = 0; // Тут индекс регистра (он должен быть int..). ОН УЖЕ ЧИСЛО!!! (его ассемблер сделал числом)
-            fscanf(file_code, "%lg", &arg); // TODO: why here %d, and in others %lg
-            proc->code[proc->ip++] = arg;
+            // StackElem_t arg = 0;
+            // fscanf(file_code, "%lg", &arg);
+            // proc->code[proc->ip++] = arg;
             break;
             }
         
         case POP:  // Кладет в регистр последний элемент стека 
             {
+                //printf("POP_\n");
             proc->code[proc->ip++] = POP; 
             StackElem_t arg = 0; // Тут индекс регистра. ОН УЖЕ ЧИСЛО!!! (его ассемблер сделал числом)
             fscanf(file_code, "%lg", &arg);
