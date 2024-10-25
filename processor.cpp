@@ -12,6 +12,9 @@
 
 // Должен переводить файл с маш кодом (файл с цифрами) в массив и выполняться 
 
+#define INIT_ELEM1 StackElem_t elem1 = 0; stack_pop(&proc->stack, &elem1);
+#define INIT_ELEM2 StackElem_t elem2 = 0; stack_pop(&proc->stack, &elem2);
+
 enum ArgType
 {
     REGISTR = 1 << 0,
@@ -61,6 +64,16 @@ struct SPU
 size_t read_file_code(SPU* proc);
 void run_code      (SPU* proc);
 void print_code      (StackElem_t code[], size_t size_code);
+void to_do_push(SPU* proc);
+void to_do_add(SPU* proc);
+void to_do_sub(SPU* proc);
+void to_do_mul(SPU* proc);
+void to_do_out(SPU* proc);
+void to_do_in(SPU* proc);
+
+void put_jump_commands(MashineCode jump_type, FILE* file_code, SPU* proc);
+void to_do_any_jump(SPU* proc, MashineCode jump_type);
+StackElem_t get_arg(SPU* proc, int bit_arg);
 
 
 
@@ -113,20 +126,23 @@ void run_code(SPU* proc)
         case PUSH: 
         {
             // printf("AAA\n");
-            int bit_arg = (int) proc->code[(++(proc->ip))++]; // TODO: pizdec nahui 
-                                                        // согласна
-            StackElem_t which_push = 0;
+            proc->ip++;
+            // int bit_arg = (int) proc->code[(++(proc->ip))++]; // TODO: pizdec nahui 
+            //                                             // согласна
+            // StackElem_t which_push = 0;
             
-            if (bit_arg & REGISTR) // регистр
-            {
-                which_push += proc->registers[(int) proc->code[proc->ip++]];
-            }
-            if (bit_arg & NUMBER) // число .............
-            {
-                which_push += proc->code[proc->ip++];
-            }
+            // if (bit_arg & REGISTR) // регистр
+            // {
+            //     which_push += proc->registers[(int) proc->code[proc->ip++]];
+            // }
+            // if (bit_arg & NUMBER) // число .............
+            // {
+            //     which_push += proc->code[proc->ip++];
+            // }
 
-            stack_push(&proc->stack, which_push);
+            // stack_push(&proc->stack, which_push);
+            to_do_push(proc);
+
             break;
         }
         
@@ -134,44 +150,61 @@ void run_code(SPU* proc)
         {
             //printf("POP\n");
             proc->ip++;
-            int arg = (int) proc->code[proc->ip++];
+            // int arg = (int) proc->code[proc->ip++];
 
-            proc->registers[arg] = (&proc->stack)->arr[(&proc->stack)->size-1];
-            stack_pop(&proc->stack);
+            // //proc->registers[arg] = (&proc->stack)->arr[(&proc->stack)->size-1];
+            // stack_pop(&proc->stack, &proc->registers[arg]); // Это сработает, если там все из char?
+            to_do_pop(proc);
             break;
         }
         
         case ADD: // TODO: delete copypaste
         {
-            // TODO: stack pop should return value (pass it by pointer)
+            // TOD: stack pop should return value (pass it by pointer)
             proc->ip++;
-            StackElem_t elem = (&proc->stack)->arr[(&proc->stack)->size-1] + (&proc->stack)->arr[(&proc->stack)->size-2]; // TODO: pop will delete this pizdec
-            stack_pop(&proc->stack); // Удаляем
-            stack_pop(&proc->stack); // Удаляем
+            //StackElem_t elem = (&proc->stack)->arr[(&proc->stack)->size-1] + (&proc->stack)->arr[(&proc->stack)->size-2]; // TODO: pop will delete this pizdec
+            
+            // StackElem_t elem1 = 0;
+            // StackElem_t elem2 = 0;
+            
+            // stack_pop(&proc->stack, &elem1); // Удаляем
+            // stack_pop(&proc->stack, &elem2); // Удаляем
 
-            stack_push(&proc->stack, elem); // Добавляем
+            // stack_push(&proc->stack, elem1 + elem2); // Добавляем
+            to_do_add(proc);
             break;
         }
         
         case SUB:
         {
             proc->ip++;
-            StackElem_t elem = (&proc->stack)->arr[(&proc->stack)->size-1] - (&proc->stack)->arr[(&proc->stack)->size-2]; // Рассчитываем
-            stack_pop(&proc->stack); // Удаляем
-            stack_pop(&proc->stack); // Удаляем
+            // StackElem_t elem = (&proc->stack)->arr[(&proc->stack)->size-1] - (&proc->stack)->arr[(&proc->stack)->size-2]; // Рассчитываем
+            
+            // StackElem_t elem1 = 0;
+            // StackElem_t elem2 = 0;
+            
+            // stack_pop(&proc->stack, &elem1); // Удаляем
+            // stack_pop(&proc->stack, &elem2); // Удаляем
 
-            stack_push(&proc->stack, elem); // Добавляем
+            // stack_push(&proc->stack, elem1 - elem2); // Добавляем
+            to_do_sub(proc);
             break;
         }
 
         case MUL:
         {
             proc->ip++;
-            StackElem_t elem = (&proc->stack)->arr[(&proc->stack)->size-1] * (&proc->stack)->arr[(&proc->stack)->size-2]; // Рассчитываем
-            stack_pop(&proc->stack); // Удаляем
-            stack_pop(&proc->stack); // Удаляем
+            // StackElem_t elem = (&proc->stack)->arr[(&proc->stack)->size-1] * (&proc->stack)->arr[(&proc->stack)->size-2]; // Рассчитываем
+            
+            // StackElem_t elem1 = 0;
+            // StackElem_t elem2 = 0;
+            
+            // stack_pop(&proc->stack, &elem1); // Удаляем
+            // stack_pop(&proc->stack, &elem2); // Удаляем
 
-            stack_push(&proc->stack, elem); // Добавляем
+            // stack_push(&proc->stack, elem1 * elem2); // Добавляем
+            to_do_mul(proc);
+            
             break;
         }
 
@@ -179,8 +212,12 @@ void run_code(SPU* proc)
         {
             proc->ip++;
 
-            printf("%g - это результат\n", (&proc->stack)->arr[(&proc->stack)->size-1]);
-            stack_pop(&proc->stack);
+            //printf("%g - это результат\n", (&proc->stack)->arr[(&proc->stack)->size-1]);
+            // StackElem_t elem = 0;
+            // stack_pop(&proc->stack, &elem);
+
+            // printf("%g - это результат\n", elem);
+            to_do_out(proc);
             break;
         }
         
@@ -188,11 +225,12 @@ void run_code(SPU* proc)
         {
             proc->ip++;
 
-            StackElem_t arg = 0;
-            printf("Введите число: \n");
-            scanf("%lg", &arg);
+            // StackElem_t arg = 0;
+            // printf("Введите число: \n");
+            // scanf("%lg", &arg);
             
-            stack_push(&proc->stack, arg);
+            // stack_push(&proc->stack, arg);
+            to_do_in(proc);
             break;
         }
 
@@ -204,28 +242,42 @@ void run_code(SPU* proc)
         
         case JA:
         {
-            if ((&proc->stack)->arr[(&proc->stack)->size-2] > (&proc->stack)->arr[(&proc->stack)->size-1]) proc->ip = (size_t) proc->code[++(proc->ip)];
+
+            INIT_ELEM1
+            INIT_ELEM2
+
+            if (elem2 > elem1) proc->ip = (size_t) proc->code[++(proc->ip)];
             else proc->ip += 2;
             break;
         }
 
         case JB:
         {
-            if ((&proc->stack)->arr[(&proc->stack)->size-2] < (&proc->stack)->arr[(&proc->stack)->size-1]) proc->ip = (size_t) proc->code[++(proc->ip)];
+
+            INIT_ELEM1
+            INIT_ELEM2
+
+            if (elem2 < elem1) proc->ip = (size_t) proc->code[++(proc->ip)];
             else proc->ip += 2;
             break;
         }
 
         case JE: // тут == !!!!
         {
-            if ((&proc->stack)->arr[(&proc->stack)->size-2] == (&proc->stack)->arr[(&proc->stack)->size-1]) proc->ip = (size_t) proc->code[++(proc->ip)];
+            INIT_ELEM1
+            INIT_ELEM2
+            
+            if (elem2 == elem1) proc->ip = (size_t) proc->code[++(proc->ip)];
             else proc->ip += 2;
             break;
         }
 
         case JNE:
         {
-            if ((&proc->stack)->arr[(&proc->stack)->size-2] != (&proc->stack)->arr[(&proc->stack)->size-1]) proc->ip = (size_t) proc->code[++(proc->ip)];
+            INIT_ELEM1
+            INIT_ELEM2
+
+            if (elem2 != elem1) proc->ip = (size_t) proc->code[++(proc->ip)];
             else proc->ip += 2;
             break;
         }
@@ -326,26 +378,25 @@ size_t read_file_code(SPU* proc)
 
         case PUSH:
             {
-            //    printf("PUSH_______\n"); // че за ........ вапвавоповпьвокпиовкаопворапдовапивоапирвиапдивопивиприваипрвкиапривапвдапив
             proc->code[proc->ip++] = PUSH; // TODO: you do that in every case
             int bit_arg = 0;
             fscanf(file_code, "%d", &bit_arg);
             proc->code[proc->ip++] = bit_arg;
             //printf("%d - bit_arg\n", bit_arg);
 
-            if (bit_arg & REGISTR) // регистр
-            {
-                //printf("AASASASDASAFSDFSDFSDFS\n");
-                StackElem_t arg = 0;
-                fscanf(file_code, "%lg", &arg); 
-                proc->code[proc->ip++] = arg;
-            }
-            if (bit_arg & NUMBER) // число .............
-            {
-                StackElem_t arg = 0;
-                fscanf(file_code, "%lg", &arg); 
-                proc->code[proc->ip++] = arg;
-            }
+            // if (bit_arg & REGISTR) // регистр
+            // {
+            //     StackElem_t arg = 0;
+            //     fscanf(file_code, "%lg", &arg); 
+            //     proc->code[proc->ip++] = arg;
+            // }
+            // if (bit_arg & NUMBER)
+            // {
+            //     StackElem_t arg = 0;
+            //     fscanf(file_code, "%lg", &arg); 
+            //     proc->code[proc->ip++] = arg;
+            // }
+            put_arguments(file_code, proc, bit_arg);
 
             // StackElem_t arg = 0;
             // fscanf(file_code, "%lg", &arg);
@@ -395,46 +446,51 @@ size_t read_file_code(SPU* proc)
         
         case JUMP:
             {
-            proc->code[proc->ip++] = JUMP;
-            int arg = 0;
-            fscanf(file_code, "%d", &arg);
-            proc->code[proc->ip++] = arg;
+            to_do_any_jump(proc, JUMP);
+            // proc->code[proc->ip++] = JUMP;
+            // int arg = 0;
+            // fscanf(file_code, "%d", &arg);
+            // proc->code[proc->ip++] = arg;
             break;
             }
         
         case JA:
             {
-            proc->code[proc->ip++] = JA;
-            int arg = 0;
-            fscanf(file_code, "%d", &arg);
-            proc->code[proc->ip++] = arg;
+            // proc->code[proc->ip++] = JA;
+            // int arg = 0;
+            // fscanf(file_code, "%d", &arg);
+            // proc->code[proc->ip++] = arg;
+            to_do_any_jump(proc, JA);
             break;
             }
         
         case JB:
             {
-            proc->code[proc->ip++] = JB;
-            int arg = 0;
-            fscanf(file_code, "%d", &arg);
-            proc->code[proc->ip++] = arg;
+            // proc->code[proc->ip++] = JB;
+            // int arg = 0;
+            // fscanf(file_code, "%d", &arg);
+            // proc->code[proc->ip++] = arg;
+            to_do_any_jump(proc, JB);
             break;
             }
         
         case JE:
             {
-            proc->code[proc->ip++] = JE;
-            int arg = 0;
-            fscanf(file_code, "%d", &arg);
-            proc->code[proc->ip++] = arg;
+            // proc->code[proc->ip++] = JE;
+            // int arg = 0;
+            // fscanf(file_code, "%d", &arg);
+            // proc->code[proc->ip++] = arg;
+            to_do_any_jump(proc, JE);
             break;
             }
         
         case JNE:
             {
-            proc->code[proc->ip++] = JNE;
-            int arg = 0;
-            fscanf(file_code, "%d", &arg);
-            proc->code[proc->ip++] = arg;
+            // proc->code[proc->ip++] = JNE;
+            // int arg = 0;
+            // fscanf(file_code, "%d", &arg);
+            // proc->code[proc->ip++] = arg;
+            to_do_any_jump(proc, JNE);
             break;
             }
         
@@ -460,14 +516,145 @@ size_t read_file_code(SPU* proc)
 
 
 
+StackElem_t get_arg(SPU* proc, int bit_arg)
+{
+    StackElem_t which_push = 0;
+    
+    if (bit_arg & REGISTR) // регистр
+    {
+        which_push += proc->registers[(int) proc->code[proc->ip++]];
+    }
+    if (bit_arg & NUMBER) // число .............
+    {
+        which_push += proc->code[proc->ip++];
+    }
+
+    return which_push;
+}
 
 
 
 
 
+void to_do_push(SPU* proc)
+{
+    int bit_arg = (int) proc->code[proc->ip++]; 
+
+    // StackElem_t which_push = 0;
+    
+    // if (bit_arg & REGISTR) // регистр
+    // {
+    //     which_push += proc->registers[(int) proc->code[proc->ip++]];
+    // }
+    // if (bit_arg & NUMBER) // число .............
+    // {
+    //     which_push += proc->code[proc->ip++];
+    // }
+
+    stack_push(&proc->stack, get_arg(proc, bit_arg));
+}
+
+
+void to_do_pop(SPU* proc)
+{
+    int arg = (int) proc->code[proc->ip++];
+
+    //proc->registers[arg] = (&proc->stack)->arr[(&proc->stack)->size-1];
+    stack_pop(&proc->stack, &proc->registers[arg]); // Это сработает, если там все из char?
+}
+
+
+// Может сделать 1 функцию, в которую передавать знак. Но это лишние if (if in if)
+void to_do_add(SPU* proc)
+{
+    StackElem_t elem1 = 0;
+    StackElem_t elem2 = 0;
+    
+    stack_pop(&proc->stack, &elem1); // Удаляем
+    stack_pop(&proc->stack, &elem2); // Удаляем
+
+    stack_push(&proc->stack, elem1 + elem2);
+}
+
+void to_do_sub(SPU* proc)
+{
+    StackElem_t elem1 = 0;
+    StackElem_t elem2 = 0;
+    
+    stack_pop(&proc->stack, &elem1); // Удаляем
+    stack_pop(&proc->stack, &elem2); // Удаляем
+
+    stack_push(&proc->stack, elem1 - elem2);
+}
+
+void to_do_mul(SPU* proc)
+{
+    StackElem_t elem1 = 0;
+    StackElem_t elem2 = 0;
+    
+    stack_pop(&proc->stack, &elem1); // Удаляем
+    stack_pop(&proc->stack, &elem2); // Удаляем
+
+    stack_push(&proc->stack, elem1 * elem2);
+}
+
+
+void to_do_out(SPU* proc)
+{
+    StackElem_t elem = 0;
+    stack_pop(&proc->stack, &elem);
+
+    printf("%g - это результат\n", elem);
+}
+
+
+void to_do_in(SPU* proc)
+{
+    StackElem_t arg = 0;
+    printf("Введите число: \n");
+    scanf("%lg", &arg);
+    
+    stack_push(&proc->stack, arg);
+}
+
+
+void to_do_any_jump(SPU* proc, MashineCode jump_type)
+{
+    
+    StackElem_t elem1 = 0;
+    StackElem_t elem2 = 0;
+    
+    stack_pop(&proc->stack, &elem1); // Удаляем
+    stack_pop(&proc->stack, &elem2); // Удаляем
+}
 
 
 
+void put_jump_commands(MashineCode jump_type, FILE* file_code, SPU* proc)
+{
+    proc->code[proc->ip++] = jump_type;
+    int arg = 0;
+    fscanf(file_code, "%d", &arg);
+    proc->code[proc->ip++] = arg;
+}
+
+
+
+void put_arguments(FILE* file_code, SPU* proc, int bit_arg) // кладет в code
+{
+    if (bit_arg & REGISTR) // регистр
+    {
+        StackElem_t arg = 0;
+        fscanf(file_code, "%lg", &arg); 
+        proc->code[proc->ip++] = arg;
+    }
+    if (bit_arg & NUMBER)
+    {
+        StackElem_t arg = 0;
+        fscanf(file_code, "%lg", &arg); 
+        proc->code[proc->ip++] = arg;
+    }
+}
 
 
 

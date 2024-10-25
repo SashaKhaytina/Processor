@@ -29,7 +29,7 @@
 #include "errors.h"
 
 #define STACK_PUSH(stack, elem)  stack_push(stack, elem ON_DEBUG(, __LINE__))
-#define STACK_POP(stack)         stack_pop(stack ON_DEBUG(, __LINE__))
+#define STACK_POP(stack)         StackElem_t pop_elem = 0; stack_pop(stack, pop_elem ON_DEBUG(, __LINE__))
 
 
 typedef double             StackElem_t;
@@ -60,7 +60,7 @@ struct Stack
 Error_t default_stack_ctor(Stack* stack, size_t capacity);
 Error_t stack_dtor        (Stack* stack);
 Error_t stack_push        (Stack* stack, StackElem_t elem ON_DEBUG(, int code_num_string));
-Error_t stack_pop         (Stack* stack  ON_DEBUG(, int code_num_string));
+Error_t stack_pop         (Stack* stack, StackElem_t* last_elem ON_DEBUG(, int code_num_string));
 Error_t stack_assert      (Stack* stack);
 void    print_stack_info  (Stack* stack, Error_t status);
 void    stack_realloc     (Stack* stack, size_t new_size);

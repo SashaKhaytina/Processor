@@ -160,7 +160,7 @@ Error_t stack_push(Stack* stack, StackElem_t elem ON_DEBUG(, int code_num_string
 }
 
 
-Error_t stack_pop(Stack* stack  ON_DEBUG(, int code_num_string))
+Error_t stack_pop(Stack* stack, StackElem_t* last_elem  ON_DEBUG(, int code_num_string))
 {
     CHECK_STACK_INFO
 
@@ -169,7 +169,7 @@ Error_t stack_pop(Stack* stack  ON_DEBUG(, int code_num_string))
     ON_DEBUG(stack->code_num_string = code_num_string;)
     ON_DEBUG(stack->name_current_func = __PRETTY_FUNCTION__;)
 
-
+    *last_elem = stack->arr[stack->size - 1];
     stack->size -= 1;
 
     if (stack->size <= (stack->capacity / 4))

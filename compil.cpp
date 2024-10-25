@@ -57,10 +57,14 @@ enum MashineCode
 
 // const char* const registers_names[] = {"RAX", "RBX", "RCX", "RDX", "REX"}; // надо сделать структуру...
 
-const size_t MAX_CODE_SIZE = 10000;
-const size_t MAX_NAME_LABEL_SIZE = 50; // TOD: it's label
-const size_t MAX_MARK_MASS_SIZE = 10;
-const size_t MAX_COMAND_SIZE = 50;
+const size_t MAX_CODE_SIZE = 10000;    // Максимальная длина массива с кодом
+const size_t MAX_NAME_LABEL_SIZE = 50; // Максимальная длина ИМЕНИ МЕТКИ
+const size_t MAX_LABELS_MASS_SIZE = 10;// Максимальная длина массива меток
+const size_t MAX_COMAND_SIZE = 50;     // Максимальная длина ИМЕНИ КОМАНДЫ 
+const size_t MAX_ARG_COMAND_SIZE = 50; // Максимальная длина АРГУМЕНТА КОМАНДЫ (кол-во символов)
+
+// Вопрос
+// MAX_NAME_LABEL_SIZE и MAX_ARG_COMAND_SIZE не надо как-то синхронизировать?
 
 struct Label
 {
@@ -70,8 +74,8 @@ struct Label
 
 struct Labels
 {
-    Label arr[MAX_MARK_MASS_SIZE];
-    //int arr[MAX_MARK_MASS_SIZE];
+    Label arr[MAX_LABELS_MASS_SIZE];
+    //int arr[MAX_LABELS_MASS_SIZE];
     size_t size;
 };
 
@@ -90,7 +94,7 @@ void create_new_label(Labels* labels, char label_name[], int ip);
 void push_command(FILE* file_asm, double code[], int* ip);
 void pop_command(char arg[], double code[], int* ip);
 int  find_label_ip(Labels* labels, char label_name[]);
-IndexRegistrs definition_index_of_register(char arg[]);
+IndexRegistrs index_of_register(char arg[]);
 void put_jump_commands(MashineCode jump_type, FILE* file_asm, Labels* labels, double code[], int* ip);
 
 void push_reg_in_code(FILE* file_asm, int arg, double code[], int* ip);
@@ -100,6 +104,7 @@ void push_num_in_code(FILE* file_asm, int arg, double code[], int* ip);
 
 int main(int argc, const char *argv[])
 {
+
     double code[MAX_CODE_SIZE] = {}; // В этом файле все StackElem_t заменены на double 
     Labels labels = {};
     //labels_ctor(&labels);
@@ -212,7 +217,7 @@ int code_put(int argc, const char *argv[], double code[], Labels* labels, int ru
     //while (true)
     while(fscanf(file_asm, "%s", command) != EOF) 
     {
-        printf("cycle\n");
+        // printf("cycle\n");
         //char command[MAX_COMAND_SIZE] = {}; // TODO: не создавай на каждой итерации цикла 
         
         // printf("%p - uk\n", file_asm);
@@ -269,7 +274,7 @@ int code_put(int argc, const char *argv[], double code[], Labels* labels, int ru
 
             // НАДО ПОМЕНЯТЬ ИМЯ ЭТОЙ КОНСтанты на какое-то максимальное колво чисел
 
-            char arg[MAX_NAME_LABEL_SIZE] = {}; // TODO: blyaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+            char arg[MAX_ARG_COMAND_SIZE] = {}; // TODO: blyaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
             fscanf(file_asm, "%s", arg); 
 
             pop_command(arg, code, &ip);
@@ -424,7 +429,7 @@ void code_output_file(double code[], size_t size_code)
 
 void create_new_label(Labels* labels, char label_name[], int ip)
 {
-    for (size_t i = 0; i < MAX_COMAND_SIZE; i++)
+    for (size_t i = 0; i < MAX_NAME_LABEL_SIZE; i++)
     {
         labels->arr[labels->size].name[i] = label_name[i];
     }
@@ -443,7 +448,7 @@ void create_new_label(Labels* labels, char label_name[], int ip)
 //     else
 //     {
 //         code[(*ip)++] = PUSHR;
-//         code[(*ip)++] = definition_index_of_register(arg);
+//         code[(*ip)++] = index_of_register(arg);
 //     }
 // }
 
@@ -458,7 +463,7 @@ void create_new_label(Labels* labels, char label_name[], int ip)
 
 //         // char which_register_push[MAX_COMAND_SIZE] = {}; // константа странная. Тут должно быть колво регистров
 //         // fscanf(file_asm, "%s", which_register_push);
-//         // code[(*ip)++] = definition_index_of_register(which_register_push);
+//         // code[(*ip)++] = index_of_register(which_register_push);
 //         push_reg_in_code(file_asm, arg, code, ip);
 
 //         fscanf(file_asm, "%s"); // +
@@ -479,7 +484,7 @@ void create_new_label(Labels* labels, char label_name[], int ip)
 //     {
 //         // char which_push[MAX_NAME_LABEL_SIZE] = {};
 //         // fscanf(file_asm, "%s", which_push);
-//         // code[(*ip)++] = definition_index_of_register(which_push);
+//         // code[(*ip)++] = index_of_register(which_push);
 //         push_reg_in_code(file_asm, arg, code, ip);
 //     }
 // }
@@ -489,7 +494,7 @@ void create_new_label(Labels* labels, char label_name[], int ip)
 // {
 //     char which_push[MAX_NAME_LABEL_SIZE] = {};
 //     fscanf(file_asm, "%s", which_push);
-//     code[(*ip)++] = definition_index_of_register(which_push);
+//     code[(*ip)++] = index_of_register(which_push);
 // }
 
 
@@ -547,16 +552,16 @@ void create_new_label(Labels* labels, char label_name[], int ip)
 
 void push_command(FILE* file_asm, double code[], int* ip)
 {
-    printf("in push\n");
-    char registr[MAX_NAME_LABEL_SIZE] = {}; // ОПЯТЬ КОНСТАНТА СЮДА НЕ ПОДХОДИТ!!!
-    char registr2[MAX_NAME_LABEL_SIZE] = {};
+    // printf("in push\n");
+    char arg_1[MAX_NAME_LABEL_SIZE] = {}; // ОПЯТЬ КОНСТАНТА СЮДА НЕ ПОДХОДИТ!!!
+    char arg_2[MAX_NAME_LABEL_SIZE] = {};
     
     //double num = 0;
 
 
     //int count_args = fscanf(file_asm, "%s + %lg", registr, &num);
 
-    int count_args = fscanf(file_asm, "%s + %s", registr, registr2);
+    int count_args = fscanf(file_asm, "%s + %s", arg_1, arg_2);
 
     if (count_args == 2)  // В любом порядке!
     {
@@ -565,34 +570,34 @@ void push_command(FILE* file_asm, double code[], int* ip)
         //printf("two args - %s %lg\n", registr, num);
         code[(*ip)++] = REGISTR + NUMBER;
         
-        if (isalpha(registr[0]))
+        if (isalpha(arg_1[0]))
         {
-            code[(*ip)++] = definition_index_of_register(registr);
-            code[(*ip)++] = atof(registr2);
+            code[(*ip)++] = index_of_register(arg_1);
+            code[(*ip)++] = atof(arg_2);
         }
         else
         {
-            code[(*ip)++] = definition_index_of_register(registr2);
-            code[(*ip)++] = atof(registr);
+            code[(*ip)++] = index_of_register(arg_2);
+            code[(*ip)++] = atof(arg_1);
         }
 
-        // code[(*ip)++] = definition_index_of_register(registr);
+        // code[(*ip)++] = index_of_register(registr);
         // code[(*ip)++] = num;
     }
 
     else if (count_args == 1)
     {
-        if (isalpha(registr[0]))
+        if (isalpha(arg_1[0]))
         {
-            printf("reg\n");
+            // printf("reg\n");
             code[(*ip)++] = REGISTR;
-            code[(*ip)++] = definition_index_of_register(registr);
+            code[(*ip)++] = index_of_register(arg_1);
         }
         else
         {
             // printf("num - %lg\n", (double) num);
             code[(*ip)++] = NUMBER;
-            code[(*ip)++] = atof(registr);
+            code[(*ip)++] = atof(arg_1);
         }
     }
     else
@@ -686,7 +691,7 @@ void push_command(FILE* file_asm, double code[], int* ip)
 //         // ПУСТЬ НИКАКИХ ПРОБЕЛОВ. СТРУКТУРА: RAX+num
 //         // Рядом с цифрой пробелы допустимы (из-за работы atof), а рядом с названием регистра - нет (будет всегда RAX по дефолту)
 
-//         code[(*ip)++] = definition_index_of_register(which_push);
+//         code[(*ip)++] = index_of_register(which_push);
 
 //         code[(*ip)++] = atof(which_push + ind_new_slag);
 
@@ -703,7 +708,7 @@ void push_command(FILE* file_asm, double code[], int* ip)
 //         else
 //         {
 //             code[(*ip)++] = REGISTR;
-//             code[(*ip)++] = definition_index_of_register(which_push);
+//             code[(*ip)++] = index_of_register(which_push);
 //         }
 //     }
 
@@ -727,7 +732,7 @@ void push_command(FILE* file_asm, double code[], int* ip)
 //     //     }
 //     //     else
 //     //     {
-//     //         code[(*ip)++] = definition_index_of_register(arg);
+//     //         code[(*ip)++] = index_of_register(arg);
 //     //     }
 //     // }
 
@@ -808,7 +813,7 @@ void push_command(FILE* file_asm, double code[], int* ip)
 
 void pop_command(char arg[], double code[], int* ip)
 {
-    code[(*ip)++] = definition_index_of_register(arg);
+    code[(*ip)++] = index_of_register(arg);
 }
 
 int find_label_ip(Labels* labels, char label_name[]) 
@@ -822,9 +827,9 @@ int find_label_ip(Labels* labels, char label_name[])
 
 // TODO: const char* const registers_names[] = {"RAX", "RBX", ...}
 
-// не пон
+// не пон как использовать
 
-IndexRegistrs definition_index_of_register(char arg[])
+IndexRegistrs index_of_register(char arg[])
 {
     if      (strcmp(arg, "RAX") == 0) return RAX;
     else if (strcmp(arg, "RBX") == 0) return RBX;
@@ -834,10 +839,10 @@ IndexRegistrs definition_index_of_register(char arg[])
     return RAX; // unreachable
 }
 
-
+// Теперь не нужен
 void labels_ctor(Labels* labels)
 {
-    for (size_t i = 0; i < MAX_MARK_MASS_SIZE; i++)
+    for (size_t i = 0; i < MAX_LABELS_MASS_SIZE; i++)
     {
         // Надо ли что-то делать с именем?
         labels->arr[i].number_comand = -1;
