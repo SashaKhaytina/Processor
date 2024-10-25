@@ -38,8 +38,11 @@ enum MashineCode
     MUL = 3, 
     OUT = 4, // ыыыы
     JUMP = 5,
-    JA = 6, // TODO: make in
-    IN = 7
+    JA = 6,
+    JB = 7,
+    JE = 8,
+    JNE = 9,
+    IN = 10
 };
 
 const size_t MAX_CODE_SIZE = 10000;
@@ -56,7 +59,7 @@ struct SPU
 
 
 size_t read_file_code(SPU* proc);
-void doing_code      (SPU* proc);
+void run_code      (SPU* proc);
 void print_code      (StackElem_t code[], size_t size_code);
 
 
@@ -70,7 +73,7 @@ int main() // флаги мешают (или нет...)
     print_code(proc.code, size_code);
 
     default_stack_ctor(&proc.stack, INITIAL_CAPACITY);
-    doing_code(&proc);
+    run_code(&proc);
     stack_dtor(&proc.stack);
 
 }
@@ -81,7 +84,7 @@ int main() // флаги мешают (или нет...)
 
 
 
-void doing_code(SPU* proc)
+void run_code(SPU* proc)
 {
     proc->ip = 0;
 
@@ -110,7 +113,7 @@ void doing_code(SPU* proc)
         case PUSH: 
         {
             // printf("AAA\n");
-            int bit_arg = proc->code[(++(proc->ip))++]; // TODO: pizdec nahui 
+            int bit_arg = (int) proc->code[(++(proc->ip))++]; // TODO: pizdec nahui 
                                                         // согласна
             StackElem_t which_push = 0;
             
@@ -138,10 +141,11 @@ void doing_code(SPU* proc)
             break;
         }
         
-        case ADD:
+        case ADD: // TODO: delete copypaste
         {
+            // TODO: stack pop should return value (pass it by pointer)
             proc->ip++;
-            StackElem_t elem = (&proc->stack)->arr[(&proc->stack)->size-1] + (&proc->stack)->arr[(&proc->stack)->size-2]; // Рассчитываем
+            StackElem_t elem = (&proc->stack)->arr[(&proc->stack)->size-1] + (&proc->stack)->arr[(&proc->stack)->size-2]; // TODO: pop will delete this pizdec
             stack_pop(&proc->stack); // Удаляем
             stack_pop(&proc->stack); // Удаляем
 
@@ -201,6 +205,27 @@ void doing_code(SPU* proc)
         case JA:
         {
             if ((&proc->stack)->arr[(&proc->stack)->size-2] > (&proc->stack)->arr[(&proc->stack)->size-1]) proc->ip = (size_t) proc->code[++(proc->ip)];
+            else proc->ip += 2;
+            break;
+        }
+
+        case JB:
+        {
+            if ((&proc->stack)->arr[(&proc->stack)->size-2] < (&proc->stack)->arr[(&proc->stack)->size-1]) proc->ip = (size_t) proc->code[++(proc->ip)];
+            else proc->ip += 2;
+            break;
+        }
+
+        case JE: // тут == !!!!
+        {
+            if ((&proc->stack)->arr[(&proc->stack)->size-2] == (&proc->stack)->arr[(&proc->stack)->size-1]) proc->ip = (size_t) proc->code[++(proc->ip)];
+            else proc->ip += 2;
+            break;
+        }
+
+        case JNE:
+        {
+            if ((&proc->stack)->arr[(&proc->stack)->size-2] != (&proc->stack)->arr[(&proc->stack)->size-1]) proc->ip = (size_t) proc->code[++(proc->ip)];
             else proc->ip += 2;
             break;
         }
@@ -380,6 +405,33 @@ size_t read_file_code(SPU* proc)
         case JA:
             {
             proc->code[proc->ip++] = JA;
+            int arg = 0;
+            fscanf(file_code, "%d", &arg);
+            proc->code[proc->ip++] = arg;
+            break;
+            }
+        
+        case JB:
+            {
+            proc->code[proc->ip++] = JB;
+            int arg = 0;
+            fscanf(file_code, "%d", &arg);
+            proc->code[proc->ip++] = arg;
+            break;
+            }
+        
+        case JE:
+            {
+            proc->code[proc->ip++] = JE;
+            int arg = 0;
+            fscanf(file_code, "%d", &arg);
+            proc->code[proc->ip++] = arg;
+            break;
+            }
+        
+        case JNE:
+            {
+            proc->code[proc->ip++] = JNE;
             int arg = 0;
             fscanf(file_code, "%d", &arg);
             proc->code[proc->ip++] = arg;
