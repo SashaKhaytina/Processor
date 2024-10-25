@@ -16,7 +16,7 @@
 
 #define CHECK_COMMAND(commanda) if (strcmp(command, commanda) == 0)
 #define FILL_CODE_FUNC_WITH_NO_ARG(command) {\
-                                                code[ip++] = command;\
+                                                code[(*ip)++] = command;\
                                                 continue;\
                                              }
 
@@ -57,11 +57,13 @@ enum MashineCode
 
 // const char* const registers_names[] = {"RAX", "RBX", "RCX", "RDX", "REX"}; // надо сделать структуру...
 
-const size_t MAX_CODE_SIZE = 10000;    // Максимальная длина массива с кодом
-const size_t MAX_NAME_LABEL_SIZE = 50; // Максимальная длина ИМЕНИ МЕТКИ
-const size_t MAX_LABELS_MASS_SIZE = 10;// Максимальная длина массива меток
-const size_t MAX_COMAND_SIZE = 50;     // Максимальная длина ИМЕНИ КОМАНДЫ 
-const size_t MAX_ARG_COMAND_SIZE = 50; // Максимальная длина АРГУМЕНТА КОМАНДЫ (кол-во символов)
+const size_t MAX_CODE_SIZE        = 10000;             // Максимальная длина массива с кодом
+const size_t MAX_NAME_LABEL_SIZE  = 50;                // Максимальная длина ИМЕНИ МЕТКИ
+const size_t MAX_LABELS_MASS_SIZE = 10;                // Максимальная длина массива меток
+const size_t MAX_COMAND_SIZE      = 50;                // Максимальная длина ИМЕНИ КОМАНДЫ 
+const size_t MAX_ARG_COMAND_SIZE  = 50;                // Максимальная длина АРГУМЕНТА КОМАНДЫ (кол-во символов)
+const char* const FILE_NAME       = "program_asm.txt"; // куда тут расставлять const?
+const char* const READ_FILE_NAME  = "program_code.txt";
 
 // Вопрос
 // MAX_NAME_LABEL_SIZE и MAX_ARG_COMAND_SIZE не надо как-то синхронизировать?
@@ -75,8 +77,17 @@ struct Label
 struct Labels
 {
     Label arr[MAX_LABELS_MASS_SIZE];
-    //int arr[MAX_LABELS_MASS_SIZE];
     size_t size;
+};
+
+
+// Имя?
+struct Asm_SPU
+{
+    double code[MAX_CODE_SIZE];
+    size_t size_code;
+    int ip;
+    Labels labels;
 };
 
 // void run_compil(int argc, const char *argv[], double code[]);
@@ -84,131 +95,51 @@ struct Labels
 
 void labels_ctor(Labels* labels);
 
-int code_put(int argc, const char *argv[], double code[], Labels* labels, int run_num); // Он заполняет!
-void print_code(double code[], size_t size_code);
-void code_output_file(double code[], size_t size_code);
+int code_put         (int argc, const char *argv[], Asm_SPU* proc, int run_num); // Он заполняет!
+void print_code      (double code[], size_t size_code);
+void code_output_file(Asm_SPU* proc);
 
 
-void create_new_label(Labels* labels, char label_name[], int ip);
 // void push_command(char arg[], double code[], int* ip);
-void push_command(FILE* file_asm, double code[], int* ip);
-void pop_command(char arg[], double code[], int* ip);
-int  find_label_ip(Labels* labels, char label_name[]);
-IndexRegistrs index_of_register(char arg[]);
+void create_new_label (Asm_SPU* proc, char label_name[]);
+void push_command     (FILE* file_asm, double code[], int* ip);
+void pop_command      (char arg[], double code[], int* ip);
+int  find_label_ip    (Labels* labels, char label_name[]);
 void put_jump_commands(MashineCode jump_type, FILE* file_asm, Labels* labels, double code[], int* ip);
 
-void push_reg_in_code(FILE* file_asm, int arg, double code[], int* ip);
-void push_num_in_code(FILE* file_asm, int arg, double code[], int* ip);
+void push_reg_in_code (FILE* file_asm, int arg, double code[], int* ip);
+void push_num_in_code (FILE* file_asm, int arg, double code[], int* ip);
 
+IndexRegistrs index_of_register(char arg[]);
 
 
 int main(int argc, const char *argv[])
 {
-
-    double code[MAX_CODE_SIZE] = {}; // В этом файле все StackElem_t заменены на double 
-    Labels labels = {};
+    Asm_SPU proc = {};
+    //double code[MAX_CODE_SIZE] = {}; // В этом файле все StackElem_t заменены на double 
+    //Labels labels = {};
     //labels_ctor(&labels);
-    code_put(argc, argv, code, &labels, 1);
-    size_t size = (size_t) code_put(argc, argv, code, &labels, 2);
-    print_code(code, size);
-    code_output_file(code, size);
+    code_put(argc, argv, &proc, 1);
+    proc.size_code = (size_t) code_put(argc, argv, &proc, 2);
+    print_code(proc.code, proc.size_code);
+    code_output_file(&proc);
     
 }
 
 
-/*
-void code_output_file(int argc, const char *argv[], double code[], size_t size)
+int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
 {
-    FILE* file_code = fopen("program_code.txt", "w");
+    Labels* labels = &proc->labels;
+    double* code = proc->code;
 
-    int ip = 0;
+    proc->ip = 0;
+    int* ip = &proc->ip;
 
-    // TOD: just print code[] array, switch is weird here
-
-
-    while(ip < size) // вроде такой критерий...
-    {
-        int command = code[ip];
-
-        switch (command)
-        {
-        case PUSH:
-            {
-            fprintf(file_code, "%d %lg\n", PUSH, code[++ip]); 
-            ip++;
-            break;
-            }
-
-        case PUSHR: // Должен класть в стек то, что в регистре
-            {
-            fprintf(file_code, "%d %d\n", PUSHR, (int) code[++ip]); 
-            ip++;
-            break;
-            }
-        
-        case POP:  // Кладет в регистр последний элемент стека 
-            {fprintf(file_code, "%d %d\n", POP, (int) code[++ip]); 
-            ip++;
-            break;}
-        
-        case ADD:
-            {fprintf(file_code, "%d\n", ADD);
-            ip++; 
-            break;}
-        
-        case SUB:
-            {fprintf(file_code, "%d\n", SUB);
-            ip++; 
-            break;}
-
-        case MUL:
-            {fprintf(file_code, "%d\n", MUL);
-            ip++; 
-            break;}
-
-        case OUT:
-            {fprintf(file_code, "%d\n", OUT);
-            ip++; 
-            break;}
-        
-        case JUMP:
-            {fprintf(file_code, "%d %d\n", JUMP, (int) code[++ip]); 
-            ip++; 
-            break;}
-        
-        case JA:
-            {fprintf(file_code, "%d %d\n", JA, (int) code[++ip]); 
-            ip++;
-            break;}
-        
-        case HLT:
-            {fprintf(file_code, "%d\n", HLT);
-            ip++;  // Из switch можно как-то остановить внешний цикл? (break занят, получается)
-            break;}
-        
-        default:
-            break;
-        }
-
-    }
-    fclose(file_code);
-}
-*/
-
-int code_put(int argc, const char *argv[], double code[], Labels* labels, int run_num)
-{
     FILE* file_asm = NULL;
-    int ip = 0;
     
 
-    if (argc != 1)
-    {
-        file_asm = fopen(argv[1], "r");
-    }
-    else
-    {
-        file_asm = fopen("program_asm.txt", "r");
-    }
+    if (argc != 1) file_asm = fopen(argv[1], "r");
+    else file_asm = fopen(FILE_NAME, "r");
 
     // |mem|reg|imm|
 
@@ -217,191 +148,84 @@ int code_put(int argc, const char *argv[], double code[], Labels* labels, int ru
     //while (true)
     while(fscanf(file_asm, "%s", command) != EOF) 
     {
-        // printf("cycle\n");
         //char command[MAX_COMAND_SIZE] = {}; // TODO: не создавай на каждой итерации цикла 
-        
-        // printf("%p - uk\n", file_asm);
-        // printf("%s - имя первой метки\n", labels->arr[0].name);
-        
         //if (fscanf(file_asm, "%s", command) == EOF) break;
 
         size_t len_str = strlen(command);
 
          if (command[len_str - 1] == ':')
-        //if (fscanf(file_asm, "%s:", command) == 0) 
         {
             command[len_str - 1] = '\0';
-
             // if (find_label_ip(labels, command) == -1) create_new_label(labels, command, ip); // TODO: you don't need to fill labels by -1, just send to function number of pass
-            if (run_num == 1) create_new_label(labels, command, ip);
+            if (run_num == 1) create_new_label(proc, command);
 
             continue;
         }
 
-        // if (strcmp(command, "PUSH") == 0)
         CHECK_COMMAND("PUSH")
         {
-            // int arg = 0;
-            // fscanf(file_asm, "%d", arg);
-
-
-            
-            // char arg[MAX_NAME_LABEL_SIZE] = {}; // немного странно использовать эту константу здесь
-            // fscanf(file_asm, "%s", arg);
-
-            code[ip++] = PUSH;
-            //code[ip++] = (double) arg; // это нк тут, тк это не аргумент
-            // Здесь arg - битовая фигня
-
-            // char which_push[2 * MAX_NAME_LABEL_SIZE + 1] = {}; // стал вообще треш какой-то
-            // // fscanf(file_asm, "%s", which_push);
-            // char c = fgetc(file_asm);
-            // for (int i = 0; c = fgetc(file_asm) != '\n'; i++)
-            // {
-            //     which_push[i] = c;
-            // }
-
-            //push_command(arg, code, &ip);
-            push_command(file_asm, code, &ip);
-
+            code[(*ip)++] = PUSH;
+            push_command(file_asm, code, ip);
             continue;
         }
 
-        // if (strcmp(command, "POP") == 0)
         CHECK_COMMAND("POP")
         {
-            code[ip++] = POP;
+            code[(*ip)++] = POP;
 
-            // НАДО ПОМЕНЯТЬ ИМЯ ЭТОЙ КОНСтанты на какое-то максимальное колво чисел
-
-            char arg[MAX_ARG_COMAND_SIZE] = {}; // TODO: blyaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+            char arg[MAX_ARG_COMAND_SIZE] = {}; 
             fscanf(file_asm, "%s", arg); 
 
-            pop_command(arg, code, &ip);
+            pop_command(arg, code, ip);
 
             continue;
         }
 
-        //if (strcmp(command, "ADD") == 0) // TODO: delete copypaste
         CHECK_COMMAND("ADD") FILL_CODE_FUNC_WITH_NO_ARG(ADD)
-        // {
-        //     code[ip++] = ADD;
-        //     continue;
-        // }
-
 
         CHECK_COMMAND("SUB") FILL_CODE_FUNC_WITH_NO_ARG(SUB)
-        // if (strcmp(command, "SUB") == 0)
-        // {
-        //     code[ip++] = SUB;
-        //     continue;
-        // }
-
 
         CHECK_COMMAND("MUL") FILL_CODE_FUNC_WITH_NO_ARG(MUL)
-        // if (strcmp(command, "MUL") == 0)
-        // {
-        //     code[ip++] = MUL;
-        //     continue;
-        // }
 
         CHECK_COMMAND("OUT") FILL_CODE_FUNC_WITH_NO_ARG(OUT)
-        // if (strcmp(command, "OUT") == 0)
-        // {
-        //     code[ip++] = OUT;
-        //     continue;
-        // }
     
         CHECK_COMMAND("IN") FILL_CODE_FUNC_WITH_NO_ARG(IN)
-        // if (strcmp(command, "IN") == 0)
-        // {
-        //     code[ip++] = IN;
-        //     continue;
-        // }
 
-        //if (strcmp(command, "JUMP") == 0) // TODO: why blya isn't it one function for jumps
         CHECK_COMMAND("JUMP")
         {
-            // code[ip++] = JUMP;
-
-            // char arg[MAX_NAME_LABEL_SIZE] = "";
-            // fscanf(file_asm, "%s", arg);
-
-            // code[ip++] = find_label_ip(labels, arg);
-            put_jump_commands(JUMP, file_asm, labels, code, &ip);
-
+            put_jump_commands(JUMP, file_asm, labels, code, ip);
             continue;
         }
 
-        //if (strcmp(command, "JA") == 0)
         CHECK_COMMAND("JA")
         {
-            // code[ip++] = JA;
-
-            // char arg[MAX_NAME_LABEL_SIZE] = "";
-            // fscanf(file_asm, "%s", arg);
-
-            // code[ip++] = find_label_ip(labels, arg);
-            put_jump_commands(JA, file_asm, labels, code, &ip);
-
+            put_jump_commands(JA, file_asm, labels, code, ip);
             continue;
         }
 
-        //if (strcmp(command, "JB") == 0)
         CHECK_COMMAND("JB")
         {
-            // code[ip++] = JB;
-
-            // char arg[MAX_NAME_LABEL_SIZE] = "";
-            // fscanf(file_asm, "%s", arg);
-
-            // code[ip++] = find_label_ip(labels, arg);
-            put_jump_commands(JB, file_asm, labels, code, &ip);
-
+            put_jump_commands(JB, file_asm, labels, code, ip);
             continue;
         }
 
-        //if (strcmp(command, "JE") == 0)
         CHECK_COMMAND("JE")
         {
-            // code[ip++] = JE;
-
-            // char arg[MAX_NAME_LABEL_SIZE] = "";
-            // fscanf(file_asm, "%s", arg);
-
-            // code[ip++] = find_label_ip(labels, arg);
-            put_jump_commands(JE, file_asm, labels, code, &ip);
-
+            put_jump_commands(JE, file_asm, labels, code, ip);
             continue;
         }
 
-        //if (strcmp(command, "JNE") == 0)
         CHECK_COMMAND("JNE")
         {
-            // code[ip++] = JNE;
-
-            // char arg[MAX_NAME_LABEL_SIZE] = "";
-            // fscanf(file_asm, "%s", arg);
-
-            // code[ip++] = find_label_ip(labels, arg);
-            put_jump_commands(JNE, file_asm, labels, code, &ip);
-
+            put_jump_commands(JNE, file_asm, labels, code, ip);
             continue;
         }
 
-        CHECK_COMMAND("HLT") FILL_CODE_FUNC_WITH_NO_ARG(HLT)
-        // if (strcmp(command, "HLT") == 0)
-        // {
-        //     code[ip++] = HLT;
-
-        //     //break;  // ЭТО ПЛОХО!!! НИЖЕ ЭТОЙ СТРОКИ НЕ ПРОЧИТАЕТ!!!! Надо сделать пока не EOF
-        //     continue;
-        // }
-        
+        CHECK_COMMAND("HLT") FILL_CODE_FUNC_WITH_NO_ARG(HLT)        
     }
     fclose(file_asm);
 
-    return ip;
+    return *ip;
 }
 
 
@@ -415,150 +239,35 @@ void print_code(double code[], size_t size_code)
 }
 
 
-void code_output_file(double code[], size_t size_code)
+void code_output_file(Asm_SPU* proc)
 {
-    FILE* file_code = fopen("program_code.txt", "w");
+    FILE* file_code = fopen(READ_FILE_NAME, "w");
 
-    for (size_t i = 0; i < size_code; i++)
+    for (size_t i = 0; i < proc->size_code; i++)
     {
-        fprintf(file_code, "%lg ", code[i]);
+        fprintf(file_code, "%lg ", proc->code[i]);
     }
     printf("\n");
 }
 
 
-void create_new_label(Labels* labels, char label_name[], int ip)
+void create_new_label(Asm_SPU* proc, char label_name[])
 {
     for (size_t i = 0; i < MAX_NAME_LABEL_SIZE; i++)
     {
-        labels->arr[labels->size].name[i] = label_name[i];
+        (&proc->labels)->arr[(&proc->labels)->size].name[i] = label_name[i];
     }
-    labels->arr[labels->size].number_comand = ip;
-    labels->size++;
+    (&proc->labels)->arr[(&proc->labels)->size].number_comand = proc->ip;
+    (&proc->labels)->size++;
 }
-
-
-// void push_command(char arg[], double code[], int* ip)
-// {
-//     if (isdigit(arg[0]))
-//     {
-//         code[(*ip)++] = PUSH;
-//         code[(*ip)++] = atof(arg);
-//     }
-//     else
-//     {
-//         code[(*ip)++] = PUSHR;
-//         code[(*ip)++] = index_of_register(arg);
-//     }
-// }
-
-
-
-/*
-// void push_command(FILE* file_asm, int arg, double code[], int* ip)
-// {
-//     if (arg & 3 == 3) // есть сложение
-//     {
-//         // ПУСТЬ ЕСТЬ СТРУКТУРА: RAX + num
-
-//         // char which_register_push[MAX_COMAND_SIZE] = {}; // константа странная. Тут должно быть колво регистров
-//         // fscanf(file_asm, "%s", which_register_push);
-//         // code[(*ip)++] = index_of_register(which_register_push);
-//         push_reg_in_code(file_asm, arg, code, ip);
-
-//         fscanf(file_asm, "%s"); // +
-
-//         // double which_num_push = 0;
-//         // fscanf(file_asm, "%lf", &which_num_push);
-//         // code[(*ip)++] = which_num_push;
-//         push_num_in_code(file_asm, arg, code, ip);
-//     }
-//     else if (arg & 2 == 2)
-//     {
-//         // double which_push = 0;
-//         // fscanf(file_asm, "%lf", &which_push);
-//         // code[(*ip)++] = which_push;
-//         push_num_in_code(file_asm, arg, code, ip);
-//     }
-//     else
-//     {
-//         // char which_push[MAX_NAME_LABEL_SIZE] = {};
-//         // fscanf(file_asm, "%s", which_push);
-//         // code[(*ip)++] = index_of_register(which_push);
-//         push_reg_in_code(file_asm, arg, code, ip);
-//     }
-// }
-*/
-
-// void push_reg_in_code(FILE* file_asm, int arg, double code[], int* ip)
-// {
-//     char which_push[MAX_NAME_LABEL_SIZE] = {};
-//     fscanf(file_asm, "%s", which_push);
-//     code[(*ip)++] = index_of_register(which_push);
-// }
-
-
-// void push_num_in_code(FILE* file_asm, int arg, double code[], int* ip)
-// {
-//     double which_push = 0;
-//     fscanf(file_asm, "%lf", &which_push);
-//     code[(*ip)++] = which_push;
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 void push_command(FILE* file_asm, double code[], int* ip)
 {
-    // printf("in push\n");
-    char arg_1[MAX_NAME_LABEL_SIZE] = {}; // ОПЯТЬ КОНСТАНТА СЮДА НЕ ПОДХОДИТ!!!
-    char arg_2[MAX_NAME_LABEL_SIZE] = {};
+    char arg_1[MAX_ARG_COMAND_SIZE] = {}; 
+    char arg_2[MAX_ARG_COMAND_SIZE] = {};
     
     //double num = 0;
-
-
     //int count_args = fscanf(file_asm, "%s + %lg", registr, &num);
 
     int count_args = fscanf(file_asm, "%s + %s", arg_1, arg_2);
@@ -567,7 +276,6 @@ void push_command(FILE* file_asm, double code[], int* ip)
     {
         // Обработка этих двух элементов
 
-        //printf("two args - %s %lg\n", registr, num);
         code[(*ip)++] = REGISTR + NUMBER;
         
         if (isalpha(arg_1[0]))
@@ -589,13 +297,11 @@ void push_command(FILE* file_asm, double code[], int* ip)
     {
         if (isalpha(arg_1[0]))
         {
-            // printf("reg\n");
             code[(*ip)++] = REGISTR;
             code[(*ip)++] = index_of_register(arg_1);
         }
         else
         {
-            // printf("num - %lg\n", (double) num);
             code[(*ip)++] = NUMBER;
             code[(*ip)++] = atof(arg_1);
         }
@@ -614,15 +320,57 @@ void push_command(FILE* file_asm, double code[], int* ip)
 
 
 
+void pop_command(char arg[], double code[], int* ip)
+{
+    code[(*ip)++] = index_of_register(arg);
+}
+
+int find_label_ip(Labels* labels, char label_name[]) 
+{
+    for (size_t i = 0; i < labels->size; i++)
+    {
+        if (strcmp(label_name, labels->arr[i].name) == 0) return labels->arr[i].number_comand;
+    }
+    return -1;
+}
+
+// TODO: const char* const registers_names[] = {"RAX", "RBX", ...}
+
+// не пон как использовать
+
+IndexRegistrs index_of_register(char arg[])
+{
+    if      (strcmp(arg, "RAX") == 0) return RAX;
+    else if (strcmp(arg, "RBX") == 0) return RBX;
+    else if (strcmp(arg, "RCX") == 0) return RCX;
+    else if (strcmp(arg, "RDX") == 0) return RDX;
+    else if (strcmp(arg, "REX") == 0) return REX;
+    return RAX; // unreachable
+}
+
+// Теперь не нужен
+void labels_ctor(Labels* labels)
+{
+    for (size_t i = 0; i < MAX_LABELS_MASS_SIZE; i++)
+    {
+        // Надо ли что-то делать с именем?
+        labels->arr[i].number_comand = -1;
+    }
+}
 
 
+void put_jump_commands(MashineCode jump_type, FILE* file_asm, Labels* labels, double code[], int* ip)
+{
+    code[(*ip)++] = jump_type;
+
+    char arg[MAX_NAME_LABEL_SIZE] = "";
+    fscanf(file_asm, "%s", arg);
+
+    code[(*ip)++] = find_label_ip(labels, arg);
+}
 
 
-
-
-
-
-
+/*
 // нафиг. Но это рабочая тема!!!
 // void push_command(FILE* file_asm, double code[], int* ip)
 // {
@@ -737,136 +485,8 @@ void push_command(FILE* file_asm, double code[], int* ip)
 //     // }
 
 // }
+*/
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void pop_command(char arg[], double code[], int* ip)
-{
-    code[(*ip)++] = index_of_register(arg);
-}
-
-int find_label_ip(Labels* labels, char label_name[]) 
-{
-    for (size_t i = 0; i < labels->size; i++)
-    {
-        if (strcmp(label_name, labels->arr[i].name) == 0) return labels->arr[i].number_comand;
-    }
-    return -1;
-}
-
-// TODO: const char* const registers_names[] = {"RAX", "RBX", ...}
-
-// не пон как использовать
-
-IndexRegistrs index_of_register(char arg[])
-{
-    if      (strcmp(arg, "RAX") == 0) return RAX;
-    else if (strcmp(arg, "RBX") == 0) return RBX;
-    else if (strcmp(arg, "RCX") == 0) return RCX;
-    else if (strcmp(arg, "RDX") == 0) return RDX;
-    else if (strcmp(arg, "REX") == 0) return REX;
-    return RAX; // unreachable
-}
-
-// Теперь не нужен
-void labels_ctor(Labels* labels)
-{
-    for (size_t i = 0; i < MAX_LABELS_MASS_SIZE; i++)
-    {
-        // Надо ли что-то делать с именем?
-        labels->arr[i].number_comand = -1;
-    }
-}
-
-
-void put_jump_commands(MashineCode jump_type, FILE* file_asm, Labels* labels, double code[], int* ip)
-{
-    code[(*ip)++] = jump_type;
-
-    char arg[MAX_NAME_LABEL_SIZE] = "";
-    fscanf(file_asm, "%s", arg);
-
-    code[(*ip)++] = find_label_ip(labels, arg);
-}
-
-
-
-
-
-
-
-// Закрыть файл !!!!!
 
 // Это если заполнять сразу в файл, без промежуточного массива
 /*
@@ -912,6 +532,7 @@ void run_compil(int argc, const char *argv[])
             fscanf(file_asm, "%s", arg);
             if (isdigit(arg[0]))
             {
+
                 fprintf(file_code, "%d ", PUSH);
                 fprintf(file_code, "%lg \n", (double) atoi(arg));
             }

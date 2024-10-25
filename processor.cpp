@@ -12,7 +12,9 @@
 
 // Должен переводить файл с маш кодом (файл с цифрами) в массив и выполняться 
 
-#define INIT_ELEM1 StackElem_t elem1 = 0; stack_pop(&proc->stack, &elem1);
+
+// Это норм вообще?
+#define INIT_ELEM1 StackElem_t elem1 = 0; stack_pop(&proc->stack, &elem1); 
 #define INIT_ELEM2 StackElem_t elem2 = 0; stack_pop(&proc->stack, &elem2);
 
 enum ArgType
@@ -21,14 +23,14 @@ enum ArgType
     NUMBER = 1 << 1
 };
 
-enum IndexRegistrs // Это не сюда, это в ассемблер
-{
-    RAX,
-    RBX,
-    RCX, 
-    RDX,
-    REX,
-};
+// enum IndexRegistrs // Это не сюда, это в ассемблер
+// {
+//     RAX,
+//     RBX,
+//     RCX, 
+//     RDX,
+//     REX,
+// };
 
 enum MashineCode
 {
@@ -50,6 +52,7 @@ enum MashineCode
 
 const size_t MAX_CODE_SIZE = 10000;
 const int STOP_PROGRAMM = -1;
+const char* const READ_FILE_NAME = "program_code.txt"; // как тут const расставлять
 
 
 struct SPU
@@ -62,24 +65,28 @@ struct SPU
 
 
 size_t read_file_code(SPU* proc);
-void run_code      (SPU* proc);
-void print_code      (StackElem_t code[], size_t size_code);
-void to_do_push(SPU* proc);
-void to_do_add(SPU* proc);
-void to_do_sub(SPU* proc);
-void to_do_mul(SPU* proc);
-void to_do_out(SPU* proc);
-void to_do_in(SPU* proc);
+void   run_code      (SPU* proc);
+void   print_code    (StackElem_t code[], size_t size_code);
 
-void put_jump_commands(MashineCode jump_type, FILE* file_code, SPU* proc);
-void to_do_any_jump(SPU* proc, MashineCode jump_type);
+void to_do_push(SPU* proc);
+void to_do_pop (SPU* proc);
+void to_do_add (SPU* proc);
+void to_do_sub (SPU* proc);
+void to_do_mul (SPU* proc);
+void to_do_out (SPU* proc);
+void to_do_in  (SPU* proc);
+
 StackElem_t get_arg(SPU* proc, int bit_arg);
 
+void put_jump_commands(MashineCode jump_type, FILE* file_code, SPU* proc);
+void put_arguments    (FILE* file_code, SPU* proc, int bit_arg);
+// void to_do_any_jump(SPU* proc, MashineCode jump_type);
 
 
-int main() // флаги мешают (или нет...)
+
+
+int main() 
 {
-    // StackElem_t code[MAX_CODE_SIZE] = {};
     SPU proc = {};
     size_t size_code = read_file_code(&proc);
 
@@ -108,69 +115,23 @@ void run_code(SPU* proc)
         MashineCode command = (MashineCode) proc->code[proc->ip];
         switch (command)
         {
-        // case PUSH: 
-        // {
-        //     StackElem_t arg = proc->code[(++(proc->ip))++]; // TODO: pizdec nahui
-        //     stack_push(&proc->stack, arg);
-        //     break;
-        // }
-
-        // case PUSHR: // Должен класть в стек то, что в регистре
-        // {
-        //     proc->ip++;
-        //     int arg = (int) proc->code[proc->ip++];
-        //     stack_push(&proc->stack, proc->registers[arg]);
-        //     break;
-        // }
-
         case PUSH: 
         {
-            // printf("AAA\n");
             proc->ip++;
-            // int bit_arg = (int) proc->code[(++(proc->ip))++]; // TODO: pizdec nahui 
-            //                                             // согласна
-            // StackElem_t which_push = 0;
-            
-            // if (bit_arg & REGISTR) // регистр
-            // {
-            //     which_push += proc->registers[(int) proc->code[proc->ip++]];
-            // }
-            // if (bit_arg & NUMBER) // число .............
-            // {
-            //     which_push += proc->code[proc->ip++];
-            // }
-
-            // stack_push(&proc->stack, which_push);
             to_do_push(proc);
-
             break;
         }
         
         case POP:  // Кладет в регистр последний элемент стека 
         {
-            //printf("POP\n");
             proc->ip++;
-            // int arg = (int) proc->code[proc->ip++];
-
-            // //proc->registers[arg] = (&proc->stack)->arr[(&proc->stack)->size-1];
-            // stack_pop(&proc->stack, &proc->registers[arg]); // Это сработает, если там все из char?
             to_do_pop(proc);
             break;
         }
         
-        case ADD: // TODO: delete copypaste
+        case ADD: 
         {
-            // TOD: stack pop should return value (pass it by pointer)
             proc->ip++;
-            //StackElem_t elem = (&proc->stack)->arr[(&proc->stack)->size-1] + (&proc->stack)->arr[(&proc->stack)->size-2]; // TODO: pop will delete this pizdec
-            
-            // StackElem_t elem1 = 0;
-            // StackElem_t elem2 = 0;
-            
-            // stack_pop(&proc->stack, &elem1); // Удаляем
-            // stack_pop(&proc->stack, &elem2); // Удаляем
-
-            // stack_push(&proc->stack, elem1 + elem2); // Добавляем
             to_do_add(proc);
             break;
         }
@@ -178,15 +139,6 @@ void run_code(SPU* proc)
         case SUB:
         {
             proc->ip++;
-            // StackElem_t elem = (&proc->stack)->arr[(&proc->stack)->size-1] - (&proc->stack)->arr[(&proc->stack)->size-2]; // Рассчитываем
-            
-            // StackElem_t elem1 = 0;
-            // StackElem_t elem2 = 0;
-            
-            // stack_pop(&proc->stack, &elem1); // Удаляем
-            // stack_pop(&proc->stack, &elem2); // Удаляем
-
-            // stack_push(&proc->stack, elem1 - elem2); // Добавляем
             to_do_sub(proc);
             break;
         }
@@ -194,29 +146,13 @@ void run_code(SPU* proc)
         case MUL:
         {
             proc->ip++;
-            // StackElem_t elem = (&proc->stack)->arr[(&proc->stack)->size-1] * (&proc->stack)->arr[(&proc->stack)->size-2]; // Рассчитываем
-            
-            // StackElem_t elem1 = 0;
-            // StackElem_t elem2 = 0;
-            
-            // stack_pop(&proc->stack, &elem1); // Удаляем
-            // stack_pop(&proc->stack, &elem2); // Удаляем
-
-            // stack_push(&proc->stack, elem1 * elem2); // Добавляем
             to_do_mul(proc);
-            
             break;
         }
 
         case OUT: // Он должен вытащить еще 
         {
             proc->ip++;
-
-            //printf("%g - это результат\n", (&proc->stack)->arr[(&proc->stack)->size-1]);
-            // StackElem_t elem = 0;
-            // stack_pop(&proc->stack, &elem);
-
-            // printf("%g - это результат\n", elem);
             to_do_out(proc);
             break;
         }
@@ -224,12 +160,6 @@ void run_code(SPU* proc)
         case IN: // push в стек то, что вводим с клавиатуры
         {
             proc->ip++;
-
-            // StackElem_t arg = 0;
-            // printf("Введите число: \n");
-            // scanf("%lg", &arg);
-            
-            // stack_push(&proc->stack, arg);
             to_do_in(proc);
             break;
         }
@@ -242,7 +172,6 @@ void run_code(SPU* proc)
         
         case JA:
         {
-
             INIT_ELEM1
             INIT_ELEM2
 
@@ -253,7 +182,6 @@ void run_code(SPU* proc)
 
         case JB:
         {
-
             INIT_ELEM1
             INIT_ELEM2
 
@@ -291,7 +219,10 @@ void run_code(SPU* proc)
         }
         
         default:
+        {
+            printf("Cинтаксическая ошибка\n");
             break;
+        }
         }
 
         //print_stack_info(&proc->stack, OK);
@@ -300,117 +231,42 @@ void run_code(SPU* proc)
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 size_t read_file_code(SPU* proc)
 {
     FILE* file_code = NULL;
-    file_code = fopen("program_code.txt", "r");
-
-    // if (argc != 1)
-    // {
-    //     file_code = fopen(argv[1], "r");
-    // }
-    // else
-    // {
-    //     file_code = fopen("program_code.txt", "r");
-    // }
-
+    file_code = fopen(READ_FILE_NAME, "r");
 
 
     proc->ip = 0;
-    bool continue_process = true;
-    while (continue_process)
+    int command = 0;
+
+    while (fscanf(file_code, "%d", &command) != EOF)
     {
-        //printf("234567890987\n");//...........................g
-        int command = 0;
-        fscanf(file_code, "%d", &command);
+        //fscanf(file_code, "%d", &command);
         printf("%d ", command);
 
         switch (command)
         {
-        // case PUSH:
-        //     {
-        //     proc->code[proc->ip++] = PUSH; // TODO: you do that in every case
-        //     StackElem_t arg = 0;
-        //     fscanf(file_code, "%lg", &arg);
-        //     proc->code[proc->ip++] = arg;
-        //     break;
-        //     }
-
-        // case PUSHR: // Должен класть в стек то, что в регистре
-        //     {
-        //     proc->code[proc->ip++] = PUSHR; 
-        //     StackElem_t arg = 0; // Тут индекс регистра (он должен быть int..). ОН УЖЕ ЧИСЛО!!! (его ассемблер сделал числом)
-        //     fscanf(file_code, "%lg", &arg); // TODO: why here %d, and in others %lg
-        //     proc->code[proc->ip++] = arg;
-        //     break;
-        //     }
-
         case PUSH:
             {
             proc->code[proc->ip++] = PUSH; // TODO: you do that in every case
             int bit_arg = 0;
             fscanf(file_code, "%d", &bit_arg);
             proc->code[proc->ip++] = bit_arg;
-            //printf("%d - bit_arg\n", bit_arg);
 
-            // if (bit_arg & REGISTR) // регистр
-            // {
-            //     StackElem_t arg = 0;
-            //     fscanf(file_code, "%lg", &arg); 
-            //     proc->code[proc->ip++] = arg;
-            // }
-            // if (bit_arg & NUMBER)
-            // {
-            //     StackElem_t arg = 0;
-            //     fscanf(file_code, "%lg", &arg); 
-            //     proc->code[proc->ip++] = arg;
-            // }
             put_arguments(file_code, proc, bit_arg);
 
-            // StackElem_t arg = 0;
-            // fscanf(file_code, "%lg", &arg);
-            // proc->code[proc->ip++] = arg;
             break;
             }
         
         case POP:  // Кладет в регистр последний элемент стека 
             {
-                //printf("POP_\n");
-            proc->code[proc->ip++] = POP; 
-            StackElem_t arg = 0; // Тут индекс регистра. ОН УЖЕ ЧИСЛО!!! (его ассемблер сделал числом)
+            proc->code[proc->ip++] = POP;
+
+            StackElem_t arg = 0;            // Тут индекс регистра. ОН УЖЕ ЧИСЛО!!! (его ассемблер сделал числом)
             fscanf(file_code, "%lg", &arg);
             proc->code[proc->ip++] = arg;
+
             break;
             }
         
@@ -446,58 +302,38 @@ size_t read_file_code(SPU* proc)
         
         case JUMP:
             {
-            to_do_any_jump(proc, JUMP);
-            // proc->code[proc->ip++] = JUMP;
-            // int arg = 0;
-            // fscanf(file_code, "%d", &arg);
-            // proc->code[proc->ip++] = arg;
+            put_jump_commands(JUMP, file_code, proc);
             break;
             }
         
         case JA:
             {
-            // proc->code[proc->ip++] = JA;
-            // int arg = 0;
-            // fscanf(file_code, "%d", &arg);
-            // proc->code[proc->ip++] = arg;
-            to_do_any_jump(proc, JA);
+            put_jump_commands(JA, file_code, proc);
             break;
             }
         
         case JB:
             {
-            // proc->code[proc->ip++] = JB;
-            // int arg = 0;
-            // fscanf(file_code, "%d", &arg);
-            // proc->code[proc->ip++] = arg;
-            to_do_any_jump(proc, JB);
+            put_jump_commands(JB, file_code, proc);
             break;
             }
         
         case JE:
             {
-            // proc->code[proc->ip++] = JE;
-            // int arg = 0;
-            // fscanf(file_code, "%d", &arg);
-            // proc->code[proc->ip++] = arg;
-            to_do_any_jump(proc, JE);
+            put_jump_commands(JE, file_code, proc);
             break;
             }
         
         case JNE:
             {
-            // proc->code[proc->ip++] = JNE;
-            // int arg = 0;
-            // fscanf(file_code, "%d", &arg);
-            // proc->code[proc->ip++] = arg;
-            to_do_any_jump(proc, JNE);
+            put_jump_commands(JNE, file_code, proc);
             break;
             }
         
         case HLT:
             {
             proc->code[proc->ip++] = HLT;
-            continue_process = false;  // Из switch можно как-то остановить внешний цикл? (break занят, получается)
+            // Из switch можно как-то остановить внешний цикл? (break занят, получается) (но тут это не надо)
             break;
             }
         
@@ -516,6 +352,9 @@ size_t read_file_code(SPU* proc)
 
 
 
+
+
+
 StackElem_t get_arg(SPU* proc, int bit_arg)
 {
     StackElem_t which_push = 0;
@@ -531,9 +370,6 @@ StackElem_t get_arg(SPU* proc, int bit_arg)
 
     return which_push;
 }
-
-
-
 
 
 void to_do_push(SPU* proc)
@@ -598,7 +434,6 @@ void to_do_mul(SPU* proc)
     stack_push(&proc->stack, elem1 * elem2);
 }
 
-
 void to_do_out(SPU* proc)
 {
     StackElem_t elem = 0;
@@ -606,7 +441,6 @@ void to_do_out(SPU* proc)
 
     printf("%g - это результат\n", elem);
 }
-
 
 void to_do_in(SPU* proc)
 {
@@ -617,16 +451,17 @@ void to_do_in(SPU* proc)
     stack_push(&proc->stack, arg);
 }
 
-
-void to_do_any_jump(SPU* proc, MashineCode jump_type)
-{
+/*
+// void to_do_any_jump(SPU* proc, MashineCode jump_type)
+// {
     
-    StackElem_t elem1 = 0;
-    StackElem_t elem2 = 0;
+//     StackElem_t elem1 = 0;
+//     StackElem_t elem2 = 0;
     
-    stack_pop(&proc->stack, &elem1); // Удаляем
-    stack_pop(&proc->stack, &elem2); // Удаляем
-}
+//     stack_pop(&proc->stack, &elem1); // Удаляем
+//     stack_pop(&proc->stack, &elem2); // Удаляем
+// }
+*/
 
 
 
@@ -637,7 +472,6 @@ void put_jump_commands(MashineCode jump_type, FILE* file_code, SPU* proc)
     fscanf(file_code, "%d", &arg);
     proc->code[proc->ip++] = arg;
 }
-
 
 
 void put_arguments(FILE* file_code, SPU* proc, int bit_arg) // кладет в code
@@ -655,10 +489,6 @@ void put_arguments(FILE* file_code, SPU* proc, int bit_arg) // кладет в c
         proc->code[proc->ip++] = arg;
     }
 }
-
-
-
-
 
 
 void print_code(StackElem_t code[], size_t size_code)
