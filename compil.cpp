@@ -22,11 +22,11 @@
 
 enum ArgType
 {
-    REGISTR = 1 << 0,
-    NUMBER = 1 << 1
+    REGISTER = 1 << 7, // Это только для double!!!!
+    NUMBER = 1 << 6
 };
 
-enum IndexRegistrs 
+enum IndexRegisters 
 {
     RAX,
     RBX,
@@ -40,19 +40,19 @@ enum IndexRegistrs
 enum MashineCode
 {
     HLT = 0,
-    PUSH = 51,
-    PUSHR = 52,
-    POP = 42,
-    ADD = 1,
-    SUB = 2,
-    MUL = 3, 
-    OUT = 4, // ыыыы
-    JUMP = 5,
-    JA = 6,
-    JB = 7,
-    JE = 8,
-    JNE = 9,
-    IN = 10
+    PUSH,
+    PUSHR,
+    POP,
+    ADD,
+    SUB,
+    MUL, 
+    OUT, // ыыыы
+    JUMP,
+    JA,
+    JB,
+    JE,
+    JNE,
+    IN
 };
 
 // const char* const registers_names[] = {"RAX", "RBX", "RCX", "RDX", "REX"}; // надо сделать структуру...
@@ -60,18 +60,18 @@ enum MashineCode
 const size_t MAX_CODE_SIZE        = 10000;             // Максимальная длина массива с кодом
 const size_t MAX_NAME_LABEL_SIZE  = 50;                // Максимальная длина ИМЕНИ МЕТКИ
 const size_t MAX_LABELS_MASS_SIZE = 10;                // Максимальная длина массива меток
-const size_t MAX_COMAND_SIZE      = 50;                // Максимальная длина ИМЕНИ КОМАНДЫ 
-const size_t MAX_ARG_COMAND_SIZE  = 50;                // Максимальная длина АРГУМЕНТА КОМАНДЫ (кол-во символов)
+const size_t MAX_COMMAND_SIZE      = 50;                // Максимальная длина ИМЕНИ КОМАНДЫ 
+const size_t MAX_ARG_COMMAND_SIZE  = 50;                // Максимальная длина АРГУМЕНТА КОМАНДЫ (кол-во символов)
 const char* const FILE_NAME       = "program_asm.txt"; // куда тут расставлять const?
 const char* const READ_FILE_NAME  = "program_code.txt";
 
 // Вопрос
-// MAX_NAME_LABEL_SIZE и MAX_ARG_COMAND_SIZE не надо как-то синхронизировать?
+// MAX_NAME_LABEL_SIZE и MAX_ARG_COMMAND_SIZE не надо как-то синхронизировать?
 
 struct Label
 {
     char name[MAX_NAME_LABEL_SIZE];
-    int number_comand;
+    int number_command;
 };
 
 struct Labels
@@ -103,14 +103,14 @@ void code_output_file(Asm_SPU* proc);
 // void push_command(char arg[], double code[], int* ip);
 void create_new_label (Asm_SPU* proc, char label_name[]);
 void push_command     (FILE* file_asm, double code[], int* ip);
-void pop_command      (char arg[], double code[], int* ip);
+void pop_command      (FILE* file_asm, double code[], int* ip);
 int  find_label_ip    (Labels* labels, char label_name[]);
 void put_jump_commands(MashineCode jump_type, FILE* file_asm, Labels* labels, double code[], int* ip);
 
 void push_reg_in_code (FILE* file_asm, int arg, double code[], int* ip);
 void push_num_in_code (FILE* file_asm, int arg, double code[], int* ip);
 
-IndexRegistrs index_of_register(char arg[]);
+IndexRegisters index_of_register(char arg[]);
 
 
 int main(int argc, const char *argv[])
@@ -119,7 +119,10 @@ int main(int argc, const char *argv[])
     //double code[MAX_CODE_SIZE] = {}; // В этом файле все StackElem_t заменены на double 
     //Labels labels = {};
     //labels_ctor(&labels);
-    code_put(argc, argv, &proc, 1);
+    proc.size_code = code_put(argc, argv, &proc, 1);
+    print_code(proc.code, proc.size_code);
+    printf("\n");
+
     proc.size_code = (size_t) code_put(argc, argv, &proc, 2);
     print_code(proc.code, proc.size_code);
     code_output_file(&proc);
@@ -143,20 +146,15 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
 
     // |mem|reg|imm|
 
-    char command[MAX_COMAND_SIZE] = {};  // Да  вроде нет проблем...
+    char command[MAX_COMMAND_SIZE] = {};
 
-    //while (true)
     while(fscanf(file_asm, "%s", command) != EOF) 
     {
-        //char command[MAX_COMAND_SIZE] = {}; // TODO: не создавай на каждой итерации цикла 
-        //if (fscanf(file_asm, "%s", command) == EOF) break;
-
         size_t len_str = strlen(command);
 
          if (command[len_str - 1] == ':')
         {
             command[len_str - 1] = '\0';
-            // if (find_label_ip(labels, command) == -1) create_new_label(labels, command, ip); // TODO: you don't need to fill labels by -1, just send to function number of pass
             if (run_num == 1) create_new_label(proc, command);
 
             continue;
@@ -164,7 +162,7 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
 
         CHECK_COMMAND("PUSH")
         {
-            code[(*ip)++] = PUSH;
+            // code[(*ip)++] = PUSH;
             push_command(file_asm, code, ip);
             continue;
         }
@@ -172,12 +170,7 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
         CHECK_COMMAND("POP")
         {
             code[(*ip)++] = POP;
-
-            char arg[MAX_ARG_COMAND_SIZE] = {}; 
-            fscanf(file_asm, "%s", arg); 
-
-            pop_command(arg, code, ip);
-
+            pop_command(file_asm, code, ip);
             continue;
         }
 
@@ -253,19 +246,20 @@ void code_output_file(Asm_SPU* proc)
 
 void create_new_label(Asm_SPU* proc, char label_name[])
 {
-    for (size_t i = 0; i < MAX_NAME_LABEL_SIZE; i++)
-    {
-        (&proc->labels)->arr[(&proc->labels)->size].name[i] = label_name[i];
-    }
-    (&proc->labels)->arr[(&proc->labels)->size].number_comand = proc->ip;
+    Label* new_label = &(&proc->labels)->arr[(&proc->labels)->size];
+    strcpy(new_label->name, label_name);
+
+    new_label->number_command = proc->ip;
+    
     (&proc->labels)->size++;
 }
 
 
 void push_command(FILE* file_asm, double code[], int* ip)
 {
-    char arg_1[MAX_ARG_COMAND_SIZE] = {}; 
-    char arg_2[MAX_ARG_COMAND_SIZE] = {};
+    code[*ip] = PUSH;
+    char arg_1[MAX_ARG_COMMAND_SIZE] = {}; 
+    char arg_2[MAX_ARG_COMMAND_SIZE] = {};
     
     //double num = 0;
     //int count_args = fscanf(file_asm, "%s + %lg", registr, &num);
@@ -276,7 +270,7 @@ void push_command(FILE* file_asm, double code[], int* ip)
     {
         // Обработка этих двух элементов
 
-        code[(*ip)++] = REGISTR + NUMBER;
+        code[(*ip)++] += REGISTER + NUMBER;
         
         if (isalpha(arg_1[0]))
         {
@@ -297,12 +291,12 @@ void push_command(FILE* file_asm, double code[], int* ip)
     {
         if (isalpha(arg_1[0]))
         {
-            code[(*ip)++] = REGISTR;
+            code[(*ip)++] += REGISTER;
             code[(*ip)++] = index_of_register(arg_1);
         }
         else
         {
-            code[(*ip)++] = NUMBER;
+            code[(*ip)++] += NUMBER;
             code[(*ip)++] = atof(arg_1);
         }
     }
@@ -320,8 +314,11 @@ void push_command(FILE* file_asm, double code[], int* ip)
 
 
 
-void pop_command(char arg[], double code[], int* ip)
+void pop_command(FILE* file_asm, double code[], int* ip)
 {
+    char arg[MAX_ARG_COMMAND_SIZE] = {}; 
+    fscanf(file_asm, "%s", arg); 
+    
     code[(*ip)++] = index_of_register(arg);
 }
 
@@ -329,7 +326,7 @@ int find_label_ip(Labels* labels, char label_name[])
 {
     for (size_t i = 0; i < labels->size; i++)
     {
-        if (strcmp(label_name, labels->arr[i].name) == 0) return labels->arr[i].number_comand;
+        if (strcmp(label_name, labels->arr[i].name) == 0) return labels->arr[i].number_command;
     }
     return -1;
 }
@@ -338,7 +335,7 @@ int find_label_ip(Labels* labels, char label_name[])
 
 // не пон как использовать
 
-IndexRegistrs index_of_register(char arg[])
+IndexRegisters index_of_register(char arg[])
 {
     if      (strcmp(arg, "RAX") == 0) return RAX;
     else if (strcmp(arg, "RBX") == 0) return RBX;
@@ -354,7 +351,7 @@ void labels_ctor(Labels* labels)
     for (size_t i = 0; i < MAX_LABELS_MASS_SIZE; i++)
     {
         // Надо ли что-то делать с именем?
-        labels->arr[i].number_comand = -1;
+        labels->arr[i].number_command = -1;
     }
 }
 
@@ -507,7 +504,7 @@ void run_compil(int argc, const char *argv[])
         file_asm = fopen("program_asm.txt", "r");
     }
 
-    //int counter_comand = 0;
+    //int counter_command = 0;
     while (true)
     {
         //printf("BBBBBBBBBBBBBBBBBB\n");
@@ -552,7 +549,7 @@ void run_compil(int argc, const char *argv[])
 
             // printf("%lg ", arg);
 
-            //counter_comand++;
+            //counter_command++;
 
             continue;
         }
@@ -571,7 +568,7 @@ void run_compil(int argc, const char *argv[])
             else if (strcmp(arg, "RDX") == 0) fprintf(file_code, "%d \n", RDX);
             else if (strcmp(arg, "REX") == 0) fprintf(file_code, "%d \n", REX);
 
-            //counter_comand++;
+            //counter_command++;
 
             continue;
         }
@@ -582,7 +579,7 @@ void run_compil(int argc, const char *argv[])
         {
             fprintf(file_code, "%d \n", ADD);
 
-            //counter_comand++;
+            //counter_command++;
 
             continue;
         }
@@ -591,7 +588,7 @@ void run_compil(int argc, const char *argv[])
         {
             fprintf(file_code, "%d \n", SUB);
 
-            //counter_comand++;
+            //counter_command++;
 
             continue;
         }
@@ -600,7 +597,7 @@ void run_compil(int argc, const char *argv[])
         {
             fprintf(file_code, "%d \n", MUL);
 
-            //counter_comand++;
+            //counter_command++;
 
             continue;
         }
@@ -609,7 +606,7 @@ void run_compil(int argc, const char *argv[])
         {
             fprintf(file_code, "%d \n", OUT);
 
-            //counter_comand++;
+            //counter_command++;
 
             continue;
         }
@@ -622,7 +619,7 @@ void run_compil(int argc, const char *argv[])
             fscanf(file_asm, "%d", &arg);
             fprintf(file_code, "%d \n", arg);
 
-            //counter_comand++;
+            //counter_command++;
 
             continue;
         }
@@ -635,7 +632,7 @@ void run_compil(int argc, const char *argv[])
             fscanf(file_asm, "%d", &arg);
             fprintf(file_code, "%d \n", arg);
 
-            //counter_comand++;
+            //counter_command++;
 
             continue;
         }
@@ -644,14 +641,14 @@ void run_compil(int argc, const char *argv[])
         {
             fprintf(file_code, "%d \n", HLT);
 
-            //counter_comand++;
+            //counter_command++;
 
             break;
         }
     }
 
     //fseek(file_code, 0L, SEEK_SET );
-    //fprintf(file_code, "%d \n", counter_comand);
+    //fprintf(file_code, "%d \n", counter_command);
 }
 */
 

@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
+
 
 #include "Stack/stack_commands.h"
 #include "Stack/errors.h"
@@ -13,46 +15,41 @@
 // Должен переводить файл с маш кодом (файл с цифрами) в массив и выполняться 
 
 
-// Это норм вообще?
-#define INIT_ELEM1 StackElem_t elem1 = 0; stack_pop(&proc->stack, &elem1); 
-#define INIT_ELEM2 StackElem_t elem2 = 0; stack_pop(&proc->stack, &elem2);
-
 enum ArgType
 {
-    REGISTR = 1 << 0,
-    NUMBER = 1 << 1
+    REGISTR = 1 << 7,
+    NUMBER = 1 << 6
 };
 
-// enum IndexRegistrs // Это не сюда, это в ассемблер
-// {
-//     RAX,
-//     RBX,
-//     RCX, 
-//     RDX,
-//     REX,
-// };
 
 enum MashineCode
 {
     HLT = 0,
-    PUSH = 51,
-    PUSHR = 52,
-    POP = 42,
-    ADD = 1,
-    SUB = 2,
-    MUL = 3, 
-    OUT = 4, // ыыыы
-    JUMP = 5,
-    JA = 6,
-    JB = 7,
-    JE = 8,
-    JNE = 9,
-    IN = 10
+    PUSH,
+    PUSHR,
+    POP,
+    ADD,
+    SUB,
+    MUL, 
+    OUT, // ыыыы
+    JUMP,
+    JA,
+    JB,
+    JE,
+    JNE,
+    IN
 };
 
+// enum MathOperation
+// {
+//     SUM,           // Сумма
+//     DIFFERENCE,    // Разность
+//     MULTIPLICATION // Умножение
+// };
+
 const size_t MAX_CODE_SIZE = 10000;
-const int STOP_PROGRAMM = -1;
-const char* const READ_FILE_NAME = "program_code.txt"; // как тут const расставлять
+// const int STOP_PROGRAMM = -1;
+const char* const READ_FILE_NAME = "program_code.txt"; 
 
 
 struct SPU
@@ -70,13 +67,23 @@ void   print_code    (StackElem_t code[], size_t size_code);
 
 void to_do_push(SPU* proc);
 void to_do_pop (SPU* proc);
+
+//void to_do_calculate(SPU* proc, MathOperation operation);
+void to_do_calculate(SPU* proc, MashineCode operation);
+
+
 void to_do_add (SPU* proc);
 void to_do_sub (SPU* proc);
 void to_do_mul (SPU* proc);
+
+
 void to_do_out (SPU* proc);
 void to_do_in  (SPU* proc);
 
 StackElem_t get_arg(SPU* proc, int bit_arg);
+
+
+void to_do_jump_with_criteria(SPU* proc, MashineCode operation);
 
 void put_jump_commands(MashineCode jump_type, FILE* file_code, SPU* proc);
 void put_arguments    (FILE* file_code, SPU* proc, int bit_arg);
@@ -112,12 +119,11 @@ void run_code(SPU* proc)
     while (continue_process)
     {
         // print_stack_info(&proc->stack, OK);
-        MashineCode command = (MashineCode) proc->code[proc->ip];
+        MashineCode command = (MashineCode) ((int)(proc->code[proc->ip]) & 31);
         switch (command)
         {
         case PUSH: 
         {
-            proc->ip++;
             to_do_push(proc);
             break;
         }
@@ -132,21 +138,21 @@ void run_code(SPU* proc)
         case ADD: 
         {
             proc->ip++;
-            to_do_add(proc);
+            to_do_calculate(proc, ADD);
             break;
         }
         
         case SUB:
         {
             proc->ip++;
-            to_do_sub(proc);
+            to_do_calculate(proc, SUB);
             break;
         }
 
         case MUL:
         {
             proc->ip++;
-            to_do_mul(proc);
+            to_do_calculate(proc, MUL);
             break;
         }
 
@@ -170,43 +176,9 @@ void run_code(SPU* proc)
             break;
         }
         
-        case JA:
+        case JA: case JB: case JE: case JNE:
         {
-            INIT_ELEM1
-            INIT_ELEM2
-
-            if (elem2 > elem1) proc->ip = (size_t) proc->code[++(proc->ip)];
-            else proc->ip += 2;
-            break;
-        }
-
-        case JB:
-        {
-            INIT_ELEM1
-            INIT_ELEM2
-
-            if (elem2 < elem1) proc->ip = (size_t) proc->code[++(proc->ip)];
-            else proc->ip += 2;
-            break;
-        }
-
-        case JE: // тут == !!!!
-        {
-            INIT_ELEM1
-            INIT_ELEM2
-            
-            if (elem2 == elem1) proc->ip = (size_t) proc->code[++(proc->ip)];
-            else proc->ip += 2;
-            break;
-        }
-
-        case JNE:
-        {
-            INIT_ELEM1
-            INIT_ELEM2
-
-            if (elem2 != elem1) proc->ip = (size_t) proc->code[++(proc->ip)];
-            else proc->ip += 2;
+            to_do_jump_with_criteria(proc, command);
             break;
         }
         
@@ -231,125 +203,46 @@ void run_code(SPU* proc)
 }
 
 
+
 size_t read_file_code(SPU* proc)
 {
     FILE* file_code = NULL;
     file_code = fopen(READ_FILE_NAME, "r");
 
-
+    
     proc->ip = 0;
-    int command = 0;
 
-    while (fscanf(file_code, "%d", &command) != EOF)
+    int num_in_mashine_code = 0;
+
+    while (fscanf(file_code, "%d", &num_in_mashine_code) != EOF)
     {
-        //fscanf(file_code, "%d", &command);
-        printf("%d ", command);
-
-        switch (command)
-        {
-        case PUSH:
-            {
-            proc->code[proc->ip++] = PUSH; // TODO: you do that in every case
-            int bit_arg = 0;
-            fscanf(file_code, "%d", &bit_arg);
-            proc->code[proc->ip++] = bit_arg;
-
-            put_arguments(file_code, proc, bit_arg);
-
-            break;
-            }
-        
-        case POP:  // Кладет в регистр последний элемент стека 
-            {
-            proc->code[proc->ip++] = POP;
-
-            StackElem_t arg = 0;            // Тут индекс регистра. ОН УЖЕ ЧИСЛО!!! (его ассемблер сделал числом)
-            fscanf(file_code, "%lg", &arg);
-            proc->code[proc->ip++] = arg;
-
-            break;
-            }
-        
-        case ADD:
-            {
-            proc->code[proc->ip++] = ADD;
-            break;
-            }
-        
-        case SUB:
-            {
-            proc->code[proc->ip++] = SUB;
-            break;
-            }
-
-        case MUL:
-            {
-            proc->code[proc->ip++] = MUL;
-            break;
-            }
-
-        case OUT:
-            {
-            proc->code[proc->ip++] = OUT;
-            break;
-            }
-        
-        case IN:
-            {
-            proc->code[proc->ip++] = IN;
-            break;
-            }
-        
-        case JUMP:
-            {
-            put_jump_commands(JUMP, file_code, proc);
-            break;
-            }
-        
-        case JA:
-            {
-            put_jump_commands(JA, file_code, proc);
-            break;
-            }
-        
-        case JB:
-            {
-            put_jump_commands(JB, file_code, proc);
-            break;
-            }
-        
-        case JE:
-            {
-            put_jump_commands(JE, file_code, proc);
-            break;
-            }
-        
-        case JNE:
-            {
-            put_jump_commands(JNE, file_code, proc);
-            break;
-            }
-        
-        case HLT:
-            {
-            proc->code[proc->ip++] = HLT;
-            // Из switch можно как-то остановить внешний цикл? (break занят, получается) (но тут это не надо)
-            break;
-            }
-        
-        default: // TODO: if you don't want to move proc->code... from switch, you should print here an error
-        {
-            printf("В машинном коде что-то не то. Программа заканчивает выполнение\n");
-            exit(STOP_PROGRAMM); // что тут писать...
-            break;
-        }
-        }
-
+        proc->code[proc->ip++] = num_in_mashine_code;
     }
-    printf("\n");
+
     return proc->ip;
+    // char text[MAX_CODE_SIZE * 3];
+    // size_t len_text = size_file(file_code);
+
+    // fread(text, sizeof(char), len_text, file_code);
+
+    // for (size_t i = 0; i < len_text; i++)
+    // {
+    //     if (isdigit(text[i])) proc->code[i] = 
+    // }
 }
 
+
+
+// size_t size_file(FILE* file)
+// {
+//     size_t size = 0;
+
+//     fseek(file, 0, SEEK_END);
+//     size = (size_t) ftell(file);
+//     fseek(file, 0, SEEK_SET);
+
+//     return size;
+// }
 
 
 
@@ -374,7 +267,7 @@ StackElem_t get_arg(SPU* proc, int bit_arg)
 
 void to_do_push(SPU* proc)
 {
-    int bit_arg = (int) proc->code[proc->ip++]; 
+    int bit_arg = (int) proc->code[proc->ip++] & 224; 
 
     // StackElem_t which_push = 0;
     
@@ -400,8 +293,9 @@ void to_do_pop(SPU* proc)
 }
 
 
-// Может сделать 1 функцию, в которую передавать знак. Но это лишние if (if in if)
-void to_do_add(SPU* proc)
+
+// void to_do_calculate(SPU* proc, MathOperation operation)
+void to_do_calculate(SPU* proc, MashineCode operation)
 {
     StackElem_t elem1 = 0;
     StackElem_t elem2 = 0;
@@ -409,30 +303,33 @@ void to_do_add(SPU* proc)
     stack_pop(&proc->stack, &elem1); // Удаляем
     stack_pop(&proc->stack, &elem2); // Удаляем
 
-    stack_push(&proc->stack, elem1 + elem2);
+    switch (operation)
+    {
+    case ADD:
+        {
+        stack_push(&proc->stack, elem1 + elem2);
+        break;
+        }
+
+    case SUB:
+        {
+        stack_push(&proc->stack, elem1 - elem2);
+        break;
+        }
+
+    case MUL:
+        {
+        stack_push(&proc->stack, elem1 * elem2);
+        break;
+        }
+    default:
+        {
+        printf("Тут надо вернуть код ошибки...\nКороче у вас ошибка синтаксиса\n");
+        break;
+        }
+    }
 }
 
-void to_do_sub(SPU* proc)
-{
-    StackElem_t elem1 = 0;
-    StackElem_t elem2 = 0;
-    
-    stack_pop(&proc->stack, &elem1); // Удаляем
-    stack_pop(&proc->stack, &elem2); // Удаляем
-
-    stack_push(&proc->stack, elem1 - elem2);
-}
-
-void to_do_mul(SPU* proc)
-{
-    StackElem_t elem1 = 0;
-    StackElem_t elem2 = 0;
-    
-    stack_pop(&proc->stack, &elem1); // Удаляем
-    stack_pop(&proc->stack, &elem2); // Удаляем
-
-    stack_push(&proc->stack, elem1 * elem2);
-}
 
 void to_do_out(SPU* proc)
 {
@@ -463,6 +360,48 @@ void to_do_in(SPU* proc)
 // }
 */
 
+
+
+
+void to_do_jump_with_criteria(SPU* proc, MashineCode operation)
+{
+    StackElem_t elem1 = 0;
+    StackElem_t elem2 = 0;
+    
+    stack_pop(&proc->stack, &elem1); // Удаляем
+    stack_pop(&proc->stack, &elem2); // Удаляем
+
+    bool correctness_condition = false;
+
+    switch (operation)
+    {
+    case JA:
+        {
+        correctness_condition = (elem2 > elem1);
+        break;
+        }
+    case JB:
+        {
+        correctness_condition = (elem2 < elem1);
+        break;
+        }
+    case JE:
+        {
+        correctness_condition = (elem2 == elem1);
+        break;
+        }
+    case JNE:
+        {
+        correctness_condition = (elem2 != elem1);
+        break;
+        }
+    default:
+        printf("Какая-то ошибка. Синтаксическая\n");
+    }
+
+    if (correctness_condition) proc->ip = (size_t) proc->code[++(proc->ip)];
+    else                       proc->ip += 2;
+}
 
 
 void put_jump_commands(MashineCode jump_type, FILE* file_code, SPU* proc)
