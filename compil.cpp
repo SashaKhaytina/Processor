@@ -22,15 +22,15 @@
 
 enum ArgType
 {
-    REGISTR = 1 << 0,
+    REGISTR = 1 << 0, // TODO: everywhere rename registr to registEr
     NUMBER = 1 << 1
 };
 
-enum IndexRegistrs 
+enum IndexRegistrs
 {
     RAX,
     RBX,
-    RCX, 
+    RCX,
     RDX,
     REX,
 };
@@ -45,7 +45,7 @@ enum MashineCode
     POP = 42,
     ADD = 1,
     SUB = 2,
-    MUL = 3, 
+    MUL = 3,
     OUT = 4, // ыыыы
     JUMP = 5,
     JA = 6,
@@ -60,13 +60,13 @@ enum MashineCode
 const size_t MAX_CODE_SIZE        = 10000;             // Максимальная длина массива с кодом
 const size_t MAX_NAME_LABEL_SIZE  = 50;                // Максимальная длина ИМЕНИ МЕТКИ
 const size_t MAX_LABELS_MASS_SIZE = 10;                // Максимальная длина массива меток
-const size_t MAX_COMAND_SIZE      = 50;                // Максимальная длина ИМЕНИ КОМАНДЫ 
+const size_t MAX_COMAND_SIZE      = 50;                // Максимальная длина ИМЕНИ КОМАНДЫ
 const size_t MAX_ARG_COMAND_SIZE  = 50;                // Максимальная длина АРГУМЕНТА КОМАНДЫ (кол-во символов)
-const char* const FILE_NAME       = "program_asm.txt"; // куда тут расставлять const?
+const char* const FILE_NAME       = "program_asm.txt"; // куда тут расставлять const? правильно ты расставила
 const char* const READ_FILE_NAME  = "program_code.txt";
 
 // Вопрос
-// MAX_NAME_LABEL_SIZE и MAX_ARG_COMAND_SIZE не надо как-то синхронизировать?
+// MAX_NAME_LABEL_SIZE и MAX_ARG_COMAND_SIZE не надо как-то синхронизировать? нет, Command с 2 m
 
 struct Label
 {
@@ -116,14 +116,14 @@ IndexRegistrs index_of_register(char arg[]);
 int main(int argc, const char *argv[])
 {
     Asm_SPU proc = {};
-    //double code[MAX_CODE_SIZE] = {}; // В этом файле все StackElem_t заменены на double 
+    //double code[MAX_CODE_SIZE] = {}; // В этом файле все StackElem_t заменены на double
     //Labels labels = {};
     //labels_ctor(&labels);
-    code_put(argc, argv, &proc, 1);
+    code_put(argc, argv, &proc, 1); // TODO: rename
     proc.size_code = (size_t) code_put(argc, argv, &proc, 2);
     print_code(proc.code, proc.size_code);
     code_output_file(&proc);
-    
+
 }
 
 
@@ -136,7 +136,7 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
     int* ip = &proc->ip;
 
     FILE* file_asm = NULL;
-    
+
 
     if (argc != 1) file_asm = fopen(argv[1], "r");
     else file_asm = fopen(FILE_NAME, "r");
@@ -146,14 +146,14 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
     char command[MAX_COMAND_SIZE] = {};  // Да  вроде нет проблем...
 
     //while (true)
-    while(fscanf(file_asm, "%s", command) != EOF) 
+    while(fscanf(file_asm, "%s", command) != EOF)
     {
-        //char command[MAX_COMAND_SIZE] = {}; // TODO: не создавай на каждой итерации цикла 
+        //char command[MAX_COMAND_SIZE] = {}; // TODO: не создавай на каждой итерации цикла
         //if (fscanf(file_asm, "%s", command) == EOF) break;
 
         size_t len_str = strlen(command);
 
-         if (command[len_str - 1] == ':')
+        if (command[len_str - 1] == ':')
         {
             command[len_str - 1] = '\0';
             // if (find_label_ip(labels, command) == -1) create_new_label(labels, command, ip); // TODO: you don't need to fill labels by -1, just send to function number of pass
@@ -173,8 +173,8 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
         {
             code[(*ip)++] = POP;
 
-            char arg[MAX_ARG_COMAND_SIZE] = {}; 
-            fscanf(file_asm, "%s", arg); 
+            char arg[MAX_ARG_COMAND_SIZE] = {};
+            fscanf(file_asm, "%s", arg); // TODO: why this lines are not in pop_command function? you can even move all body of your if to this function, it will be better
 
             pop_command(arg, code, ip);
 
@@ -188,7 +188,7 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
         CHECK_COMMAND("MUL") FILL_CODE_FUNC_WITH_NO_ARG(MUL)
 
         CHECK_COMMAND("OUT") FILL_CODE_FUNC_WITH_NO_ARG(OUT)
-    
+
         CHECK_COMMAND("IN") FILL_CODE_FUNC_WITH_NO_ARG(IN)
 
         CHECK_COMMAND("JUMP")
@@ -221,7 +221,7 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
             continue;
         }
 
-        CHECK_COMMAND("HLT") FILL_CODE_FUNC_WITH_NO_ARG(HLT)        
+        CHECK_COMMAND("HLT") FILL_CODE_FUNC_WITH_NO_ARG(HLT)
     }
     fclose(file_asm);
 
@@ -253,9 +253,10 @@ void code_output_file(Asm_SPU* proc)
 
 void create_new_label(Asm_SPU* proc, char label_name[])
 {
+    // TODO: make some new variables like cur_label = (&proc->labels)->arr[(&proc->labels)->size] and work with this variable, it will make easier reading your code
     for (size_t i = 0; i < MAX_NAME_LABEL_SIZE; i++)
     {
-        (&proc->labels)->arr[(&proc->labels)->size].name[i] = label_name[i];
+        (&proc->labels)->arr[(&proc->labels)->size].name[i] = label_name[i]; // TODO: isn't it just strcpy, and why you copy all 50 symbols, not strlen? (or while '\0' isn't meeted)
     }
     (&proc->labels)->arr[(&proc->labels)->size].number_comand = proc->ip;
     (&proc->labels)->size++;
@@ -264,9 +265,9 @@ void create_new_label(Asm_SPU* proc, char label_name[])
 
 void push_command(FILE* file_asm, double code[], int* ip)
 {
-    char arg_1[MAX_ARG_COMAND_SIZE] = {}; 
+    char arg_1[MAX_ARG_COMAND_SIZE] = {};
     char arg_2[MAX_ARG_COMAND_SIZE] = {};
-    
+
     //double num = 0;
     //int count_args = fscanf(file_asm, "%s + %lg", registr, &num);
 
@@ -277,7 +278,7 @@ void push_command(FILE* file_asm, double code[], int* ip)
         // Обработка этих двух элементов
 
         code[(*ip)++] = REGISTR + NUMBER;
-        
+        // TODO: надо хранить маски в одном элементе массива кода с номером команды, а то получается (пока нет неравеномерного кодирования) у тебя 8 байт под номер команды, дальше 8 байт под маски, это все надо объединить
         if (isalpha(arg_1[0]))
         {
             code[(*ip)++] = index_of_register(arg_1);
@@ -308,8 +309,8 @@ void push_command(FILE* file_asm, double code[], int* ip)
     }
     else
     {
-        printf("Ошибка синтаксиса\n"); 
-        // exit(-1); // еще констагнту можно
+        printf("Ошибка синтаксиса\n");
+        // exit(-1); // еще констагнту можно // TODO: usually in this cases here is return exit code, do not use exit
     }
 
 
@@ -325,7 +326,7 @@ void pop_command(char arg[], double code[], int* ip)
     code[(*ip)++] = index_of_register(arg);
 }
 
-int find_label_ip(Labels* labels, char label_name[]) 
+int find_label_ip(Labels* labels, char label_name[])
 {
     for (size_t i = 0; i < labels->size; i++)
     {
@@ -376,7 +377,7 @@ void put_jump_commands(MashineCode jump_type, FILE* file_asm, Labels* labels, do
 // {
 //     // Пришла строка. Там может быть число, может быть регистр, а может быть сумма
 //     // можем найти +, а потом запустить функцию выше (которая в комментах) (она по сути определяет тип элемента)
-//     // Нет. Элементы должны идти в определенном!!! порядке. 
+//     // Нет. Элементы должны идти в определенном!!! порядке.
 //     // Но мы же можем их просто переставить, если нужно, в той же функции выше.
 
 
@@ -394,7 +395,7 @@ void put_jump_commands(MashineCode jump_type, FILE* file_asm, Labels* labels, do
 
 //     //char c = fgetc(file_asm); // пропустить пробел после 2-ого аргумента
 //     for (int i = 0; c != '\n'; i++)
-//     {   
+//     {
 //         //printf("%c - c\n", c);
 
 
@@ -403,7 +404,7 @@ void put_jump_commands(MashineCode jump_type, FILE* file_asm, Labels* labels, do
 //         // if (c == ' ') // Это вообще... что.. это надо? у нас тогда индекс собьется аоаоаоаоаоаоааооаоаоаа (rax +_4) тут конец строка. За чтооооооооооо
 //         // {
 //         //     continue;
-//         // } 
+//         // }
 
 //         // if (c == '[')
 //         // {
@@ -413,7 +414,7 @@ void put_jump_commands(MashineCode jump_type, FILE* file_asm, Labels* labels, do
 //         //     c = fgetc(file_asm);
 //         //     continue;
 //         // }
-        
+
 //         if (c == '+')
 //         {
 //             which_push[i] = '\0';
@@ -426,8 +427,8 @@ void put_jump_commands(MashineCode jump_type, FILE* file_asm, Labels* labels, do
 //         which_push[i] = c;
 //         c = fgetc(file_asm);
 //     }
-    
-    
+
+
 //     // Надо определить что это.
 //     // ищем +
 //     if (is_summ) // значит + есть...
@@ -495,7 +496,7 @@ void run_compil(int argc, const char *argv[])
     FILE* file_asm = NULL;
     FILE* file_code = fopen("program_code.txt", "w");
     //printf("%p - uk1\n", file_code);
-    
+
 
     if (argc != 1)
     {
@@ -576,7 +577,7 @@ void run_compil(int argc, const char *argv[])
             continue;
         }
 
-        
+
 
         if (strcmp(command, "ADD") == 0)
         {
