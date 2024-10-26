@@ -18,7 +18,8 @@
 enum ArgType
 {
     REGISTR = 1 << 7,
-    NUMBER = 1 << 6
+    NUMBER = 1 << 6,
+    RAM = 1 << 5
 };
 
 
@@ -47,9 +48,11 @@ enum MashineCode
 //     MULTIPLICATION // Умножение
 // };
 
-const size_t MAX_CODE_SIZE = 10000;
+const size_t MAX_CODE_SIZE       = 10000;
 // const int STOP_PROGRAMM = -1;
 const char* const READ_FILE_NAME = "program_code.txt"; 
+const size_t RAM_SIZE            = 10000; 
+
 
 
 struct SPU
@@ -58,6 +61,8 @@ struct SPU
     size_t ip;
     Stack stack; 
     StackElem_t registers[5];  // это норм тип для них?
+
+    StackElem_t ram[RAM_SIZE];
 };
 
 
@@ -95,6 +100,9 @@ void put_arguments    (FILE* file_code, SPU* proc, int bit_arg);
 int main() 
 {
     SPU proc = {};
+    proc.ram[5] = 500;
+    proc.ram[2] = 200;
+    proc.ram[3] = 300;
     size_t size_code = read_file_code(&proc);
 
     print_code(proc.code, size_code);
@@ -124,12 +132,14 @@ void run_code(SPU* proc)
         {
         case PUSH: 
         {
+            // printf("PUSH\n");
             to_do_push(proc);
             break;
         }
         
         case POP:  // Кладет в регистр последний элемент стека 
         {
+            // printf("POP\n");
             proc->ip++;
             to_do_pop(proc);
             break;
@@ -137,6 +147,7 @@ void run_code(SPU* proc)
         
         case ADD: 
         {
+            // printf("ADD\n");
             proc->ip++;
             to_do_calculate(proc, ADD);
             break;
@@ -144,6 +155,7 @@ void run_code(SPU* proc)
         
         case SUB:
         {
+            // printf("SUB\n");
             proc->ip++;
             to_do_calculate(proc, SUB);
             break;
@@ -151,6 +163,7 @@ void run_code(SPU* proc)
 
         case MUL:
         {
+            // printf("MUL\n");
             proc->ip++;
             to_do_calculate(proc, MUL);
             break;
@@ -158,6 +171,7 @@ void run_code(SPU* proc)
 
         case OUT: // Он должен вытащить еще 
         {
+            // printf("OUT\n");
             proc->ip++;
             to_do_out(proc);
             break;
@@ -165,6 +179,7 @@ void run_code(SPU* proc)
         
         case IN: // push в стек то, что вводим с клавиатуры
         {
+            // printf("IN\n");
             proc->ip++;
             to_do_in(proc);
             break;
@@ -172,18 +187,21 @@ void run_code(SPU* proc)
 
         case JUMP:
         {
+            // printf("JUMP\n");
             proc->ip = (size_t) proc->code[++(proc->ip)];
             break;
         }
         
         case JA: case JB: case JE: case JNE:
         {
+            // printf("ANOTHER JUMP\n");
             to_do_jump_with_criteria(proc, command);
             break;
         }
         
         case HLT:
         {
+            // printf("HLT\n");
             proc->ip++;
             printf("Закончили\n");
             continue_process = false;
@@ -259,6 +277,10 @@ StackElem_t get_arg(SPU* proc, int bit_arg)
     if (bit_arg & NUMBER) // число .............
     {
         which_push += proc->code[proc->ip++];
+    }
+    if (bit_arg & RAM) 
+    {
+        which_push = proc->ram[(int) which_push];
     }
 
     return which_push;
@@ -404,13 +426,13 @@ void to_do_jump_with_criteria(SPU* proc, MashineCode operation)
 }
 
 
-void put_jump_commands(MashineCode jump_type, FILE* file_code, SPU* proc)
-{
-    proc->code[proc->ip++] = jump_type;
-    int arg = 0;
-    fscanf(file_code, "%d", &arg);
-    proc->code[proc->ip++] = arg;
-}
+// void put_jump_commands(MashineCode jump_type, FILE* file_code, SPU* proc)
+// {
+//     proc->code[proc->ip++] = jump_type;
+//     int arg = 0;
+//     fscanf(file_code, "%d", &arg);
+//     proc->code[proc->ip++] = arg;
+// }
 
 
 void put_arguments(FILE* file_code, SPU* proc, int bit_arg) // кладет в code

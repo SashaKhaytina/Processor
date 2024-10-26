@@ -22,8 +22,9 @@
 
 enum ArgType
 {
-    REGISTER = 1 << 7, // Это только для double!!!!
-    NUMBER = 1 << 6
+    REGISTER = 1 << 7, // Это только для double!!!!??
+    NUMBER = 1 << 6,
+    RAM = 1 << 5
 };
 
 enum IndexRegisters 
@@ -65,6 +66,8 @@ const size_t MAX_ARG_COMMAND_SIZE  = 50;                // Максимальн�
 const char* const FILE_NAME       = "program_asm.txt"; // куда тут расставлять const?
 const char* const READ_FILE_NAME  = "program_code.txt";
 
+const size_t RAM_SIZE             = 10000; 
+
 // Вопрос
 // MAX_NAME_LABEL_SIZE и MAX_ARG_COMMAND_SIZE не надо как-то синхронизировать?
 
@@ -88,6 +91,8 @@ struct Asm_SPU
     size_t size_code;
     int ip;
     Labels labels;
+
+    double ram[RAM_SIZE]; // он должен быть определенного типа?
 };
 
 // void run_compil(int argc, const char *argv[], double code[]);
@@ -102,13 +107,10 @@ void code_output_file(Asm_SPU* proc);
 
 // void push_command(char arg[], double code[], int* ip);
 void create_new_label (Asm_SPU* proc, char label_name[]);
-void push_command     (FILE* file_asm, double code[], int* ip);
-void pop_command      (FILE* file_asm, double code[], int* ip);
+void push_command     (FILE* file_asm, Asm_SPU* proc);
+void pop_command      (FILE* file_asm, Asm_SPU* proc);
 int  find_label_ip    (Labels* labels, char label_name[]);
-void put_jump_commands(MashineCode jump_type, FILE* file_asm, Labels* labels, double code[], int* ip);
-
-void push_reg_in_code (FILE* file_asm, int arg, double code[], int* ip);
-void push_num_in_code (FILE* file_asm, int arg, double code[], int* ip);
+void put_jump_commands(MashineCode jump_type, FILE* file_asm, Asm_SPU* proc);
 
 IndexRegisters index_of_register(char arg[]);
 
@@ -116,9 +118,7 @@ IndexRegisters index_of_register(char arg[]);
 int main(int argc, const char *argv[])
 {
     Asm_SPU proc = {};
-    //double code[MAX_CODE_SIZE] = {}; // В этом файле все StackElem_t заменены на double 
-    //Labels labels = {};
-    //labels_ctor(&labels);
+
     proc.size_code = code_put(argc, argv, &proc, 1);
     print_code(proc.code, proc.size_code);
     printf("\n");
@@ -163,14 +163,14 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
         CHECK_COMMAND("PUSH")
         {
             // code[(*ip)++] = PUSH;
-            push_command(file_asm, code, ip);
+            push_command(file_asm, proc);
             continue;
         }
 
         CHECK_COMMAND("POP")
         {
             code[(*ip)++] = POP;
-            pop_command(file_asm, code, ip);
+            pop_command(file_asm, proc);
             continue;
         }
 
@@ -186,31 +186,31 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
 
         CHECK_COMMAND("JUMP")
         {
-            put_jump_commands(JUMP, file_asm, labels, code, ip);
+            put_jump_commands(JUMP, file_asm, proc);
             continue;
         }
 
         CHECK_COMMAND("JA")
         {
-            put_jump_commands(JA, file_asm, labels, code, ip);
+            put_jump_commands(JA, file_asm, proc);
             continue;
         }
 
         CHECK_COMMAND("JB")
         {
-            put_jump_commands(JB, file_asm, labels, code, ip);
+            put_jump_commands(JB, file_asm, proc);
             continue;
         }
 
         CHECK_COMMAND("JE")
         {
-            put_jump_commands(JE, file_asm, labels, code, ip);
+            put_jump_commands(JE, file_asm, proc);
             continue;
         }
 
         CHECK_COMMAND("JNE")
         {
-            put_jump_commands(JNE, file_asm, labels, code, ip);
+            put_jump_commands(JNE, file_asm, proc);
             continue;
         }
 
@@ -255,9 +255,10 @@ void create_new_label(Asm_SPU* proc, char label_name[])
 }
 
 
-void push_command(FILE* file_asm, double code[], int* ip)
+void push_command(FILE* file_asm, Asm_SPU* proc)
 {
-    code[*ip] = PUSH;
+
+    proc->code[proc->ip] = PUSH;
     char arg_1[MAX_ARG_COMMAND_SIZE] = {}; 
     char arg_2[MAX_ARG_COMMAND_SIZE] = {};
     
@@ -265,22 +266,35 @@ void push_command(FILE* file_asm, double code[], int* ip)
     //int count_args = fscanf(file_asm, "%s + %lg", registr, &num);
 
     int count_args = fscanf(file_asm, "%s + %s", arg_1, arg_2);
+    //printf("%s - arg_1\n%s - arg_2\n", arg_1, arg_2);
 
     if (count_args == 2)  // В любом порядке!
     {
         // Обработка этих двух элементов
 
-        code[(*ip)++] += REGISTER + NUMBER;
-        
-        if (isalpha(arg_1[0]))
+        if (arg_1[0] == '[' && arg_2[strlen(arg_2) - 1] == ']') // если есть [] (оперативная память)
         {
-            code[(*ip)++] = index_of_register(arg_1);
-            code[(*ip)++] = atof(arg_2);
+            proc->code[(proc->ip)++] += REGISTER + NUMBER + RAM;
+
+            strcpy(arg_1, &arg_1[1]);
+            arg_2[strlen(arg_2) - 1] = '\0';
         }
         else
         {
-            code[(*ip)++] = index_of_register(arg_2);
-            code[(*ip)++] = atof(arg_1);
+            proc->code[(proc->ip)++] += REGISTER + NUMBER;
+        }
+
+        //printf("%s - arg_1\n%s - arg_2\n", arg_1, arg_2);
+        
+        if (isalpha(arg_1[0]))
+        {
+            proc->code[(proc->ip)++] = index_of_register(arg_1);
+            proc->code[(proc->ip)++] = atof(arg_2);
+        }
+        else
+        {
+            proc->code[(proc->ip)++] = index_of_register(arg_2);
+            proc->code[(proc->ip)++] = atof(arg_1);
         }
 
         // code[(*ip)++] = index_of_register(registr);
@@ -289,15 +303,24 @@ void push_command(FILE* file_asm, double code[], int* ip)
 
     else if (count_args == 1)
     {
+        if (arg_1[0] == '[' && arg_1[strlen(arg_1) - 1] == ']')
+        {
+            proc->code[proc->ip] += RAM;
+
+            strcpy(arg_1, &arg_1[1]);
+            arg_1[strlen(arg_1) - 1] = '\0';
+        }
+
+
         if (isalpha(arg_1[0]))
         {
-            code[(*ip)++] += REGISTER;
-            code[(*ip)++] = index_of_register(arg_1);
+            proc->code[(proc->ip)++] += REGISTER;
+            proc->code[(proc->ip)++] = index_of_register(arg_1);
         }
         else
         {
-            code[(*ip)++] += NUMBER;
-            code[(*ip)++] = atof(arg_1);
+            proc->code[(proc->ip)++] += NUMBER;
+            proc->code[(proc->ip)++] = atof(arg_1);
         }
     }
     else
@@ -314,12 +337,12 @@ void push_command(FILE* file_asm, double code[], int* ip)
 
 
 
-void pop_command(FILE* file_asm, double code[], int* ip)
+void pop_command(FILE* file_asm, Asm_SPU* proc)
 {
     char arg[MAX_ARG_COMMAND_SIZE] = {}; 
     fscanf(file_asm, "%s", arg); 
     
-    code[(*ip)++] = index_of_register(arg);
+    proc->code[(proc->ip)++] = index_of_register(arg);
 }
 
 int find_label_ip(Labels* labels, char label_name[]) 
@@ -356,14 +379,14 @@ void labels_ctor(Labels* labels)
 }
 
 
-void put_jump_commands(MashineCode jump_type, FILE* file_asm, Labels* labels, double code[], int* ip)
+void put_jump_commands(MashineCode jump_type, FILE* file_asm, Asm_SPU* proc)
 {
-    code[(*ip)++] = jump_type;
+    proc->code[proc->ip++] = jump_type;
 
     char arg[MAX_NAME_LABEL_SIZE] = "";
     fscanf(file_asm, "%s", arg);
 
-    code[(*ip)++] = find_label_ip(labels, arg);
+    proc->code[proc->ip++] = find_label_ip(&proc->labels, arg);
 }
 
 
