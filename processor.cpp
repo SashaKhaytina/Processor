@@ -140,7 +140,7 @@ void run_code(SPU* proc)
         case POP:  // Кладет в регистр последний элемент стека 
         {
             // printf("POP\n");
-            proc->ip++;
+            // proc->ip++;
             to_do_pop(proc);
             break;
         }
@@ -287,6 +287,41 @@ StackElem_t get_arg(SPU* proc, int bit_arg)
 }
 
 
+StackElem_t* get_arg_pop(SPU* proc, int bit_arg) // Указатель на регистр или на ячейку памяти!!!
+{
+    StackElem_t* point_to_put = NULL;
+
+    if (bit_arg & RAM)
+    {
+        StackElem_t which_push = 0;
+        if (bit_arg & REGISTR) // регистр
+        {
+            //printf("%d - reg\n", (int) proc->code[proc->ip++]);
+            which_push += proc->registers[(int) proc->code[proc->ip++]];
+        }
+        if (bit_arg & NUMBER) // число .............
+        {
+            which_push += proc->code[proc->ip++];
+        }
+
+        return &proc->ram[(int) which_push]; // указатель на ячейку
+    }
+    else // только регистр
+    {
+        int arg = (int) proc->code[proc->ip++];
+        return &proc->registers[arg];
+        //stack_pop(&proc->stack, &proc->registers[arg]);
+    }
+    
+    // if (bit_arg & RAM) 
+    // {
+    //     which_push = proc->ram[(int) which_push];
+    // }
+
+    //return which_push;
+}
+
+
 void to_do_push(SPU* proc)
 {
     int bit_arg = (int) proc->code[proc->ip++] & 224; 
@@ -308,10 +343,17 @@ void to_do_push(SPU* proc)
 
 void to_do_pop(SPU* proc)
 {
-    int arg = (int) proc->code[proc->ip++];
+    int bit_arg = (int) proc->code[proc->ip++] & 224;
+    // int arg = (int) proc->code[proc->ip++];
+    StackElem_t last_elem = 0;
+    stack_pop(&proc->stack, &last_elem);
+
+    StackElem_t* uk = get_arg_pop(proc, bit_arg);
+
+    *uk = last_elem;
 
     //proc->registers[arg] = (&proc->stack)->arr[(&proc->stack)->size-1];
-    stack_pop(&proc->stack, &proc->registers[arg]); // Это сработает, если там все из char?
+    // stack_pop(&proc->stack, &proc->registers[arg]); // Это сработает, если там все из char?
 }
 
 

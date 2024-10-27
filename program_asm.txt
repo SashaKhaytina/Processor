@@ -1,10 +1,14 @@
 IN
 POP RAX
+IN
+POP RBX
 
 PUSH [RAX + 2]
 OUT
 
 PUSH [2]
+POP [3 + RBX]
+PUSH [6]
 OUT
 
 PUSH [RAX]

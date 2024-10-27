@@ -107,12 +107,17 @@ void code_output_file(Asm_SPU* proc);
 
 // void push_command(char arg[], double code[], int* ip);
 void create_new_label (Asm_SPU* proc, char label_name[]);
-void push_command     (FILE* file_asm, Asm_SPU* proc);
-void pop_command      (FILE* file_asm, Asm_SPU* proc);
+
+void stack_command    (FILE* file_asm, Asm_SPU* proc, MashineCode type_command);
+// void push_command     (FILE* file_asm, Asm_SPU* proc);
+// void pop_command      (FILE* file_asm, Asm_SPU* proc);
+
 int  find_label_ip    (Labels* labels, char label_name[]);
 void put_jump_commands(MashineCode jump_type, FILE* file_asm, Asm_SPU* proc);
 
 IndexRegisters index_of_register(char arg[]);
+void check_and_put_in_right_order(Asm_SPU* proc, char arg_1[], char arg_2[]);
+
 
 
 int main(int argc, const char *argv[])
@@ -163,14 +168,16 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
         CHECK_COMMAND("PUSH")
         {
             // code[(*ip)++] = PUSH;
-            push_command(file_asm, proc);
+            //push_command(file_asm, proc);
+            stack_command(file_asm, proc, PUSH);
             continue;
         }
 
         CHECK_COMMAND("POP")
         {
-            code[(*ip)++] = POP;
-            pop_command(file_asm, proc);
+            // code[(*ip)++] = POP;
+            // pop_command(file_asm, proc);
+            stack_command(file_asm, proc, POP);
             continue;
         }
 
@@ -255,10 +262,19 @@ void create_new_label(Asm_SPU* proc, char label_name[])
 }
 
 
-void push_command(FILE* file_asm, Asm_SPU* proc)
-{
 
-    proc->code[proc->ip] = PUSH;
+
+
+
+
+
+
+
+
+
+void stack_command(FILE* file_asm, Asm_SPU* proc, MashineCode type_command)
+{
+    proc->code[proc->ip] = type_command;
     char arg_1[MAX_ARG_COMMAND_SIZE] = {}; 
     char arg_2[MAX_ARG_COMMAND_SIZE] = {};
     
@@ -281,21 +297,30 @@ void push_command(FILE* file_asm, Asm_SPU* proc)
         }
         else
         {
-            proc->code[(proc->ip)++] += REGISTER + NUMBER;
+            if (type_command == POP)
+            {
+                printf("Синтаксическая ошибка\n"); // в pop нельзя подавать сумму без квадратныx скобок
+            }
+            else // PUSH
+            {
+                proc->code[(proc->ip)++] += REGISTER + NUMBER;
+            }
+            // proc->code[(proc->ip)++] += REGISTER + NUMBER;
         }
 
         //printf("%s - arg_1\n%s - arg_2\n", arg_1, arg_2);
         
-        if (isalpha(arg_1[0]))
-        {
-            proc->code[(proc->ip)++] = index_of_register(arg_1);
-            proc->code[(proc->ip)++] = atof(arg_2);
-        }
-        else
-        {
-            proc->code[(proc->ip)++] = index_of_register(arg_2);
-            proc->code[(proc->ip)++] = atof(arg_1);
-        }
+        // if (isalpha(arg_1[0]))
+        // {
+        //     proc->code[(proc->ip)++] = index_of_register(arg_1);
+        //     proc->code[(proc->ip)++] = atof(arg_2);
+        // }
+        // else
+        // {
+        //     proc->code[(proc->ip)++] = index_of_register(arg_2);
+        //     proc->code[(proc->ip)++] = atof(arg_1);
+        // }
+        check_and_put_in_right_order(proc, arg_1, arg_2);
 
         // code[(*ip)++] = index_of_register(registr);
         // code[(*ip)++] = num;
@@ -319,8 +344,15 @@ void push_command(FILE* file_asm, Asm_SPU* proc)
         }
         else
         {
-            proc->code[(proc->ip)++] += NUMBER;
-            proc->code[(proc->ip)++] = atof(arg_1);
+            if (type_command == POP && proc->code[proc->ip] == POP) // должен быть еще RAM
+            {
+                printf("Синтаксическая ошибка\n");
+            }
+            else
+            {
+                proc->code[(proc->ip)++] += NUMBER;
+                proc->code[(proc->ip)++] = atof(arg_1);
+            }
         }
     }
     else
@@ -328,22 +360,195 @@ void push_command(FILE* file_asm, Asm_SPU* proc)
         printf("Ошибка синтаксиса\n"); 
         // exit(-1); // еще констагнту можно
     }
-
-
-
 }
 
 
 
 
 
-void pop_command(FILE* file_asm, Asm_SPU* proc)
-{
-    char arg[MAX_ARG_COMMAND_SIZE] = {}; 
-    fscanf(file_asm, "%s", arg); 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// void push_command(FILE* file_asm, Asm_SPU* proc)
+// {
+
+//     proc->code[proc->ip] = PUSH;
+//     char arg_1[MAX_ARG_COMMAND_SIZE] = {}; 
+//     char arg_2[MAX_ARG_COMMAND_SIZE] = {};
     
-    proc->code[(proc->ip)++] = index_of_register(arg);
-}
+//     //double num = 0;
+//     //int count_args = fscanf(file_asm, "%s + %lg", registr, &num);
+
+//     int count_args = fscanf(file_asm, "%s + %s", arg_1, arg_2);
+//     //printf("%s - arg_1\n%s - arg_2\n", arg_1, arg_2);
+
+//     if (count_args == 2)  // В любом порядке!
+//     {
+//         // Обработка этих двух элементов
+
+//         if (arg_1[0] == '[' && arg_2[strlen(arg_2) - 1] == ']') // если есть [] (оперативная память)
+//         {
+//             proc->code[(proc->ip)++] += REGISTER + NUMBER + RAM;
+
+//             strcpy(arg_1, &arg_1[1]);
+//             arg_2[strlen(arg_2) - 1] = '\0';
+//         }
+//         else
+//         {
+//             proc->code[(proc->ip)++] += REGISTER + NUMBER;
+//         }
+
+//         //printf("%s - arg_1\n%s - arg_2\n", arg_1, arg_2);
+        
+//         // if (isalpha(arg_1[0]))
+//         // {
+//         //     proc->code[(proc->ip)++] = index_of_register(arg_1);
+//         //     proc->code[(proc->ip)++] = atof(arg_2);
+//         // }
+//         // else
+//         // {
+//         //     proc->code[(proc->ip)++] = index_of_register(arg_2);
+//         //     proc->code[(proc->ip)++] = atof(arg_1);
+//         // }
+//         check_and_put_in_right_order(proc, arg_1, arg_2);
+
+//         // code[(*ip)++] = index_of_register(registr);
+//         // code[(*ip)++] = num;
+//     }
+
+//     else if (count_args == 1)
+//     {
+//         if (arg_1[0] == '[' && arg_1[strlen(arg_1) - 1] == ']')
+//         {
+//             proc->code[proc->ip] += RAM;
+
+//             strcpy(arg_1, &arg_1[1]);
+//             arg_1[strlen(arg_1) - 1] = '\0';
+//         }
+
+
+//         if (isalpha(arg_1[0]))
+//         {
+//             proc->code[(proc->ip)++] += REGISTER;
+//             proc->code[(proc->ip)++] = index_of_register(arg_1);
+//         }
+//         else
+//         {
+//             proc->code[(proc->ip)++] += NUMBER;
+//             proc->code[(proc->ip)++] = atof(arg_1);
+//         }
+//     }
+//     else
+//     {
+//         printf("Ошибка синтаксиса\n"); 
+//         // exit(-1); // еще констагнту можно
+//     }
+
+
+
+// }
+
+
+
+
+
+// void pop_command(FILE* file_asm, Asm_SPU* proc)
+// {
+//     proc->code[proc->ip] = POP;
+//     char arg_1[MAX_ARG_COMMAND_SIZE] = {}; 
+//     char arg_2[MAX_ARG_COMMAND_SIZE] = {};
+
+//     int count_args = fscanf(file_asm, "%s + %s", arg_1, arg_2);
+
+    
+
+//     if (count_args == 2)  // В любом порядке!
+//     {
+//         // Обработка этих двух элементов
+
+//         if (arg_1[0] == '[' && arg_2[strlen(arg_2) - 1] == ']') // если есть [] (оперативная память)
+//         {
+//             proc->code[(proc->ip)++] += REGISTER + NUMBER + RAM;
+
+//             strcpy(arg_1, &arg_1[1]);
+//             arg_2[strlen(arg_2) - 1] = '\0';
+//         }
+//         else
+//         {
+//             printf("Синтаксическая ошибка\n"); // в pop нельзя подавать сумму без квадратныx скобок
+//         }
+
+
+//         // Проверка на аргументы
+//         // if (isalpha(arg_1[0]))
+//         // {
+//         //     proc->code[(proc->ip)++] = index_of_register(arg_1);
+//         //     proc->code[(proc->ip)++] = atof(arg_2);
+//         // }
+//         // else
+//         // {
+//         //     proc->code[(proc->ip)++] = index_of_register(arg_2);
+//         //     proc->code[(proc->ip)++] = atof(arg_1);
+//         // }
+//         check_and_put_in_right_order(proc, arg_1, arg_2);
+
+//     }
+
+//     else if (count_args == 1)
+//     {
+//         if (arg_1[0] == '[' && arg_1[strlen(arg_1) - 1] == ']')
+//         {
+//             proc->code[proc->ip] += RAM;
+
+//             strcpy(arg_1, &arg_1[1]);
+//             arg_1[strlen(arg_1) - 1] = '\0';
+//         }
+
+
+//         if (isalpha(arg_1[0]))
+//         {
+//             proc->code[(proc->ip)++] += REGISTER;
+//             proc->code[(proc->ip)++] = index_of_register(arg_1);
+//         }
+//         else
+//         {
+//             if (proc->code[proc->ip] == POP) // должен быть еще RAM
+//             {
+//                 printf("Синтаксическая ошибка\n"); // нельзя POP num
+//             }
+//             else
+//             {
+//                 proc->code[(proc->ip)++] += NUMBER;
+//                 proc->code[(proc->ip)++] = atof(arg_1);
+//             }
+//         }
+//     }
+//     else
+//     {
+//         printf("Ошибка синтаксиса\n"); 
+//         // exit(-1); // еще констагнту можно
+//     }
+
+//     // char arg[MAX_ARG_COMMAND_SIZE] = {}; 
+//     // fscanf(file_asm, "%s", arg); 
+    
+//     // proc->code[(proc->ip)++] = index_of_register(arg);
+// }
 
 int find_label_ip(Labels* labels, char label_name[]) 
 {
@@ -352,6 +557,21 @@ int find_label_ip(Labels* labels, char label_name[])
         if (strcmp(label_name, labels->arr[i].name) == 0) return labels->arr[i].number_command;
     }
     return -1;
+}
+
+
+void check_and_put_in_right_order(Asm_SPU* proc, char arg_1[], char arg_2[])
+{
+    if (isalpha(arg_1[0]))
+    {
+        proc->code[(proc->ip)++] = index_of_register(arg_1);
+        proc->code[(proc->ip)++] = atof(arg_2);
+    }
+    else
+    {
+        proc->code[(proc->ip)++] = index_of_register(arg_2);
+        proc->code[(proc->ip)++] = atof(arg_1);
+    }
 }
 
 // TODO: const char* const registers_names[] = {"RAX", "RBX", ...}
