@@ -1,0 +1,39 @@
+IN
+POP RAX
+PUSH RAX
+POP RBX
+
+JUMP START_F
+STOP_F:
+
+PUSH RBX
+OUT
+
+HLT
+
+
+
+START_F:
+PUSH RAX
+PUSH 1
+JE FINISH
+
+    PUSH RBX
+
+    PUSH 1
+    PUSH RAX
+    SUB
+
+    MUL
+    POP RBX
+
+
+    PUSH 1
+    PUSH RAX
+    SUB
+    POP RAX
+
+    JUMP START_F
+    FINISH:
+JUMP STOP_F
+
