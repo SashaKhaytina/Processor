@@ -12,7 +12,18 @@
 
 // Должен переводить файл слов (асемблер) в файл с маш кодом (файл с цифрами)
 // в битовом формате принципиально в каком типе вводишь и читаешь?.....
-// Еще сдалвть, чтоб он 2 раза читал (прыжок ввверх)
+
+
+// #define CHECK_JUMP_COMMAND(commanda) strcmp(command, commanda) == 0
+    // if (CHECK_JUMP_COMMAND("JUMP") || 
+    //     CHECK_JUMP_COMMAND("JUMP") || 
+    //     CHECK_JUMP_COMMAND("JUMP") || 
+    //     CHECK_JUMP_COMMAND("JUMP") || 
+    //     CHECK_JUMP_COMMAND("JUMP"))
+    // {
+    //     put_jump_commands(JUMP, file_asm, proc);
+    //     continue;
+    // }
 
 #define CHECK_COMMAND(commanda) if (strcmp(command, commanda) == 0)
 #define FILL_CODE_FUNC_WITH_NO_ARG(command) {\
@@ -36,8 +47,6 @@ enum IndexRegisters
     REX,
 };
 
-// TODO: delete magic consts, fix naming, enum 52 wtf, make struct asm
-
 enum MashineCode
 {
     HLT = 0,
@@ -47,7 +56,7 @@ enum MashineCode
     ADD,
     SUB,
     MUL, 
-    OUT, // ыыыы
+    OUT, 
     JUMP,
     JA,
     JB,
@@ -56,20 +65,16 @@ enum MashineCode
     IN
 };
 
-// const char* const registers_names[] = {"RAX", "RBX", "RCX", "RDX", "REX"}; // надо сделать структуру...
-
 const size_t MAX_CODE_SIZE        = 10000;             // Максимальная длина массива с кодом
 const size_t MAX_NAME_LABEL_SIZE  = 50;                // Максимальная длина ИМЕНИ МЕТКИ
 const size_t MAX_LABELS_MASS_SIZE = 10;                // Максимальная длина массива меток
-const size_t MAX_COMMAND_SIZE      = 50;                // Максимальная длина ИМЕНИ КОМАНДЫ 
-const size_t MAX_ARG_COMMAND_SIZE  = 50;                // Максимальная длина АРГУМЕНТА КОМАНДЫ (кол-во символов)
-const char* const FILE_NAME       = "program_asm.txt"; // куда тут расставлять const?
+const size_t MAX_COMMAND_SIZE     = 50;                // Максимальная длина ИМЕНИ КОМАНДЫ 
+const size_t MAX_ARG_COMMAND_SIZE = 50;                // Максимальная длина АРГУМЕНТА КОМАНДЫ (кол-во символов)
+const size_t RAM_SIZE             = 10000;             // Размер оперативной памяти
+const char* const FILE_NAME       = "program_asm.txt"; 
 const char* const READ_FILE_NAME  = "program_code.txt";
 
-const size_t RAM_SIZE             = 10000; 
 
-// Вопрос
-// MAX_NAME_LABEL_SIZE и MAX_ARG_COMMAND_SIZE не надо как-то синхронизировать?
 
 struct Label
 {
@@ -84,7 +89,6 @@ struct Labels
 };
 
 
-// Имя?
 struct Asm_SPU
 {
     double code[MAX_CODE_SIZE];
@@ -95,22 +99,17 @@ struct Asm_SPU
     double ram[RAM_SIZE]; // он должен быть определенного типа?
 };
 
-// void run_compil(int argc, const char *argv[], double code[]);
-//void code_output_file(int argc, const char *argv[], double code[], size_t size);
 
 void labels_ctor(Labels* labels);
 
-int code_put         (int argc, const char *argv[], Asm_SPU* proc, int run_num); // Он заполняет!
+int code_put         (int argc, const char *argv[], Asm_SPU* proc, int run_num);
 void print_code      (double code[], size_t size_code);
 void code_output_file(Asm_SPU* proc);
 
 
-// void push_command(char arg[], double code[], int* ip);
 void create_new_label (Asm_SPU* proc, char label_name[]);
 
 void stack_command    (FILE* file_asm, Asm_SPU* proc, MashineCode type_command);
-// void push_command     (FILE* file_asm, Asm_SPU* proc);
-// void pop_command      (FILE* file_asm, Asm_SPU* proc);
 
 int  find_label_ip    (Labels* labels, char label_name[]);
 void put_jump_commands(MashineCode jump_type, FILE* file_asm, Asm_SPU* proc);
@@ -133,6 +132,7 @@ int main(int argc, const char *argv[])
     code_output_file(&proc);
     
 }
+
 
 
 int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
@@ -167,16 +167,12 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
 
         CHECK_COMMAND("PUSH")
         {
-            // code[(*ip)++] = PUSH;
-            //push_command(file_asm, proc);
             stack_command(file_asm, proc, PUSH);
             continue;
         }
 
         CHECK_COMMAND("POP")
         {
-            // code[(*ip)++] = POP;
-            // pop_command(file_asm, proc);
             stack_command(file_asm, proc, POP);
             continue;
         }
@@ -262,32 +258,16 @@ void create_new_label(Asm_SPU* proc, char label_name[])
 }
 
 
-
-
-
-
-
-
-
-
-
-
 void stack_command(FILE* file_asm, Asm_SPU* proc, MashineCode type_command)
 {
     proc->code[proc->ip] = type_command;
     char arg_1[MAX_ARG_COMMAND_SIZE] = {}; 
     char arg_2[MAX_ARG_COMMAND_SIZE] = {};
-    
-    //double num = 0;
-    //int count_args = fscanf(file_asm, "%s + %lg", registr, &num);
 
     int count_args = fscanf(file_asm, "%s + %s", arg_1, arg_2);
-    //printf("%s - arg_1\n%s - arg_2\n", arg_1, arg_2);
 
-    if (count_args == 2)  // В любом порядке!
+    if (count_args == 2)  // Два аргуманта (сумма (в любом порядке))
     {
-        // Обработка этих двух элементов
-
         if (arg_1[0] == '[' && arg_2[strlen(arg_2) - 1] == ']') // если есть [] (оперативная память)
         {
             proc->code[(proc->ip)++] += REGISTER + NUMBER + RAM;
@@ -305,30 +285,14 @@ void stack_command(FILE* file_asm, Asm_SPU* proc, MashineCode type_command)
             {
                 proc->code[(proc->ip)++] += REGISTER + NUMBER;
             }
-            // proc->code[(proc->ip)++] += REGISTER + NUMBER;
         }
 
-        //printf("%s - arg_1\n%s - arg_2\n", arg_1, arg_2);
-        
-        // if (isalpha(arg_1[0]))
-        // {
-        //     proc->code[(proc->ip)++] = index_of_register(arg_1);
-        //     proc->code[(proc->ip)++] = atof(arg_2);
-        // }
-        // else
-        // {
-        //     proc->code[(proc->ip)++] = index_of_register(arg_2);
-        //     proc->code[(proc->ip)++] = atof(arg_1);
-        // }
         check_and_put_in_right_order(proc, arg_1, arg_2);
-
-        // code[(*ip)++] = index_of_register(registr);
-        // code[(*ip)++] = num;
     }
 
-    else if (count_args == 1)
+    else if (count_args == 1) // один аргумент
     {
-        if (arg_1[0] == '[' && arg_1[strlen(arg_1) - 1] == ']')
+        if (arg_1[0] == '[' && arg_1[strlen(arg_1) - 1] == ']')   // Опреативная память
         {
             proc->code[proc->ip] += RAM;
 
@@ -337,14 +301,14 @@ void stack_command(FILE* file_asm, Asm_SPU* proc, MashineCode type_command)
         }
 
 
-        if (isalpha(arg_1[0]))
+        if (isalpha(arg_1[0]))                                    // Регистр
         {
             proc->code[(proc->ip)++] += REGISTER;
             proc->code[(proc->ip)++] = index_of_register(arg_1);
         }
-        else
+        else                                                      // Число
         {
-            if (type_command == POP && proc->code[proc->ip] == POP) // должен быть еще RAM
+            if (type_command == POP && proc->code[proc->ip] == POP) // У pop должен быть еще RAM
             {
                 printf("Синтаксическая ошибка\n");
             }
@@ -355,200 +319,13 @@ void stack_command(FILE* file_asm, Asm_SPU* proc, MashineCode type_command)
             }
         }
     }
+
     else
     {
-        printf("Ошибка синтаксиса\n"); 
-        // exit(-1); // еще констагнту можно
+        printf("Синтаксическая ошибка\n"); 
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// void push_command(FILE* file_asm, Asm_SPU* proc)
-// {
-
-//     proc->code[proc->ip] = PUSH;
-//     char arg_1[MAX_ARG_COMMAND_SIZE] = {}; 
-//     char arg_2[MAX_ARG_COMMAND_SIZE] = {};
-    
-//     //double num = 0;
-//     //int count_args = fscanf(file_asm, "%s + %lg", registr, &num);
-
-//     int count_args = fscanf(file_asm, "%s + %s", arg_1, arg_2);
-//     //printf("%s - arg_1\n%s - arg_2\n", arg_1, arg_2);
-
-//     if (count_args == 2)  // В любом порядке!
-//     {
-//         // Обработка этих двух элементов
-
-//         if (arg_1[0] == '[' && arg_2[strlen(arg_2) - 1] == ']') // если есть [] (оперативная память)
-//         {
-//             proc->code[(proc->ip)++] += REGISTER + NUMBER + RAM;
-
-//             strcpy(arg_1, &arg_1[1]);
-//             arg_2[strlen(arg_2) - 1] = '\0';
-//         }
-//         else
-//         {
-//             proc->code[(proc->ip)++] += REGISTER + NUMBER;
-//         }
-
-//         //printf("%s - arg_1\n%s - arg_2\n", arg_1, arg_2);
-        
-//         // if (isalpha(arg_1[0]))
-//         // {
-//         //     proc->code[(proc->ip)++] = index_of_register(arg_1);
-//         //     proc->code[(proc->ip)++] = atof(arg_2);
-//         // }
-//         // else
-//         // {
-//         //     proc->code[(proc->ip)++] = index_of_register(arg_2);
-//         //     proc->code[(proc->ip)++] = atof(arg_1);
-//         // }
-//         check_and_put_in_right_order(proc, arg_1, arg_2);
-
-//         // code[(*ip)++] = index_of_register(registr);
-//         // code[(*ip)++] = num;
-//     }
-
-//     else if (count_args == 1)
-//     {
-//         if (arg_1[0] == '[' && arg_1[strlen(arg_1) - 1] == ']')
-//         {
-//             proc->code[proc->ip] += RAM;
-
-//             strcpy(arg_1, &arg_1[1]);
-//             arg_1[strlen(arg_1) - 1] = '\0';
-//         }
-
-
-//         if (isalpha(arg_1[0]))
-//         {
-//             proc->code[(proc->ip)++] += REGISTER;
-//             proc->code[(proc->ip)++] = index_of_register(arg_1);
-//         }
-//         else
-//         {
-//             proc->code[(proc->ip)++] += NUMBER;
-//             proc->code[(proc->ip)++] = atof(arg_1);
-//         }
-//     }
-//     else
-//     {
-//         printf("Ошибка синтаксиса\n"); 
-//         // exit(-1); // еще констагнту можно
-//     }
-
-
-
-// }
-
-
-
-
-
-// void pop_command(FILE* file_asm, Asm_SPU* proc)
-// {
-//     proc->code[proc->ip] = POP;
-//     char arg_1[MAX_ARG_COMMAND_SIZE] = {}; 
-//     char arg_2[MAX_ARG_COMMAND_SIZE] = {};
-
-//     int count_args = fscanf(file_asm, "%s + %s", arg_1, arg_2);
-
-    
-
-//     if (count_args == 2)  // В любом порядке!
-//     {
-//         // Обработка этих двух элементов
-
-//         if (arg_1[0] == '[' && arg_2[strlen(arg_2) - 1] == ']') // если есть [] (оперативная память)
-//         {
-//             proc->code[(proc->ip)++] += REGISTER + NUMBER + RAM;
-
-//             strcpy(arg_1, &arg_1[1]);
-//             arg_2[strlen(arg_2) - 1] = '\0';
-//         }
-//         else
-//         {
-//             printf("Синтаксическая ошибка\n"); // в pop нельзя подавать сумму без квадратныx скобок
-//         }
-
-
-//         // Проверка на аргументы
-//         // if (isalpha(arg_1[0]))
-//         // {
-//         //     proc->code[(proc->ip)++] = index_of_register(arg_1);
-//         //     proc->code[(proc->ip)++] = atof(arg_2);
-//         // }
-//         // else
-//         // {
-//         //     proc->code[(proc->ip)++] = index_of_register(arg_2);
-//         //     proc->code[(proc->ip)++] = atof(arg_1);
-//         // }
-//         check_and_put_in_right_order(proc, arg_1, arg_2);
-
-//     }
-
-//     else if (count_args == 1)
-//     {
-//         if (arg_1[0] == '[' && arg_1[strlen(arg_1) - 1] == ']')
-//         {
-//             proc->code[proc->ip] += RAM;
-
-//             strcpy(arg_1, &arg_1[1]);
-//             arg_1[strlen(arg_1) - 1] = '\0';
-//         }
-
-
-//         if (isalpha(arg_1[0]))
-//         {
-//             proc->code[(proc->ip)++] += REGISTER;
-//             proc->code[(proc->ip)++] = index_of_register(arg_1);
-//         }
-//         else
-//         {
-//             if (proc->code[proc->ip] == POP) // должен быть еще RAM
-//             {
-//                 printf("Синтаксическая ошибка\n"); // нельзя POP num
-//             }
-//             else
-//             {
-//                 proc->code[(proc->ip)++] += NUMBER;
-//                 proc->code[(proc->ip)++] = atof(arg_1);
-//             }
-//         }
-//     }
-//     else
-//     {
-//         printf("Ошибка синтаксиса\n"); 
-//         // exit(-1); // еще констагнту можно
-//     }
-
-//     // char arg[MAX_ARG_COMMAND_SIZE] = {}; 
-//     // fscanf(file_asm, "%s", arg); 
-    
-//     // proc->code[(proc->ip)++] = index_of_register(arg);
-// }
 
 int find_label_ip(Labels* labels, char label_name[]) 
 {
@@ -588,16 +365,6 @@ IndexRegisters index_of_register(char arg[])
     return RAX; // unreachable
 }
 
-// Теперь не нужен
-void labels_ctor(Labels* labels)
-{
-    for (size_t i = 0; i < MAX_LABELS_MASS_SIZE; i++)
-    {
-        // Надо ли что-то делать с именем?
-        labels->arr[i].number_command = -1;
-    }
-}
-
 
 void put_jump_commands(MashineCode jump_type, FILE* file_asm, Asm_SPU* proc)
 {
@@ -609,6 +376,24 @@ void put_jump_commands(MashineCode jump_type, FILE* file_asm, Asm_SPU* proc)
     proc->code[proc->ip++] = find_label_ip(&proc->labels, arg);
 }
 
+
+
+
+
+
+
+
+
+
+// Теперь не нужен
+// void labels_ctor(Labels* labels)
+// {
+//     for (size_t i = 0; i < MAX_LABELS_MASS_SIZE; i++)
+//     {
+//         // Надо ли что-то делать с именем?
+//         labels->arr[i].number_command = -1;
+//     }
+// }
 
 /*
 // нафиг. Но это рабочая тема!!!

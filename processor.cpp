@@ -1,7 +1,6 @@
 // g++ processor.cpp Stack/stack_commands.cpp Stack/errors.cpp Stack/utils.cpp -D_DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggressive-loop-optimizations -Wc++14-compat -Wmissing-declarations -Wcast-align -Wcast-qual -Wchar-subscripts -Wconditionally-supported -Wconversion -Wctor-dtor-privacy -Wempty-body -Wfloat-equal -Wformat-nonliteral -Wformat-security -Wformat-signedness -Wformat=2 -Winline -Wlogical-op -Wnon-virtual-dtor -Wopenmp-simd -Woverloaded-virtual -Wpacked -Wpointer-arith -Winit-self -Wredundant-decls -Wshadow -Wsign-conversion -Wsign-promo -Wstrict-null-sentinel -Wstrict-overflow=2 -Wsuggest-attribute=noreturn -Wsuggest-final-methods -Wsuggest-final-types -Wsuggest-override -Wswitch-default -Wswitch-enum -Wsync-nand -Wundef -Wunreachable-code -Wunused -Wuseless-cast -Wvariadic-macros -Wno-literal-suffix -Wno-missing-field-initializers -Wno-narrowing -Wno-old-style-cast -Wno-varargs -Wstack-protector -fcheck-new -fsized-deallocation -fstack-protector -fstrict-overflow -flto-odr-type-merging -fno-omit-frame-pointer -Wlarger-than=8000 -Wstack-usage=8192 -pie -fPIE -Werror=vla -fsanitize=address,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,integer-divide-by-zero,leak,nonnull-attribute,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,undefined,unreachable,vla-bound,vptr -o processor
 
 
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -32,7 +31,7 @@ enum MashineCode
     ADD,
     SUB,
     MUL, 
-    OUT, // ыыыы
+    OUT,
     JUMP,
     JA,
     JB,
@@ -49,7 +48,6 @@ enum MashineCode
 // };
 
 const size_t MAX_CODE_SIZE       = 10000;
-// const int STOP_PROGRAMM = -1;
 const char* const READ_FILE_NAME = "program_code.txt"; 
 const size_t RAM_SIZE            = 10000; 
 
@@ -77,23 +75,16 @@ void to_do_pop (SPU* proc);
 void to_do_calculate(SPU* proc, MashineCode operation);
 
 
-void to_do_add (SPU* proc);
-void to_do_sub (SPU* proc);
-void to_do_mul (SPU* proc);
-
-
 void to_do_out (SPU* proc);
 void to_do_in  (SPU* proc);
 
-StackElem_t get_arg(SPU* proc, int bit_arg);
+StackElem_t get_arg_push(SPU* proc, int bit_arg);
+StackElem_t* get_arg_pop(SPU* proc, int bit_arg);
 
 
 void to_do_jump_with_criteria(SPU* proc, MashineCode operation);
 
 void put_jump_commands(MashineCode jump_type, FILE* file_code, SPU* proc);
-void put_arguments    (FILE* file_code, SPU* proc, int bit_arg);
-// void to_do_any_jump(SPU* proc, MashineCode jump_type);
-
 
 
 
@@ -140,7 +131,6 @@ void run_code(SPU* proc)
         case POP:  // Кладет в регистр последний элемент стека 
         {
             // printf("POP\n");
-            // proc->ip++;
             to_do_pop(proc);
             break;
         }
@@ -238,35 +228,10 @@ size_t read_file_code(SPU* proc)
     }
 
     return proc->ip;
-    // char text[MAX_CODE_SIZE * 3];
-    // size_t len_text = size_file(file_code);
-
-    // fread(text, sizeof(char), len_text, file_code);
-
-    // for (size_t i = 0; i < len_text; i++)
-    // {
-    //     if (isdigit(text[i])) proc->code[i] = 
-    // }
 }
 
 
-
-// size_t size_file(FILE* file)
-// {
-//     size_t size = 0;
-
-//     fseek(file, 0, SEEK_END);
-//     size = (size_t) ftell(file);
-//     fseek(file, 0, SEEK_SET);
-
-//     return size;
-// }
-
-
-
-
-
-StackElem_t get_arg(SPU* proc, int bit_arg)
+StackElem_t get_arg_push(SPU* proc, int bit_arg) // Возвращает значение того, что нужно положить в стек
 {
     StackElem_t which_push = 0;
     
@@ -274,11 +239,11 @@ StackElem_t get_arg(SPU* proc, int bit_arg)
     {
         which_push += proc->registers[(int) proc->code[proc->ip++]];
     }
-    if (bit_arg & NUMBER) // число .............
+    if (bit_arg & NUMBER)  // число 
     {
         which_push += proc->code[proc->ip++];
     }
-    if (bit_arg & RAM) 
+    if (bit_arg & RAM)    // число 
     {
         which_push = proc->ram[(int) which_push];
     }
@@ -287,38 +252,29 @@ StackElem_t get_arg(SPU* proc, int bit_arg)
 }
 
 
-StackElem_t* get_arg_pop(SPU* proc, int bit_arg) // Указатель на регистр или на ячейку памяти!!!
+StackElem_t* get_arg_pop(SPU* proc, int bit_arg) // Возвращает указатель на регистр или на ячейку в оперативной памяти
 {
     StackElem_t* point_to_put = NULL;
 
-    if (bit_arg & RAM)
+    if (bit_arg & RAM)                                                       // Опреативная память
     {
         StackElem_t which_push = 0;
-        if (bit_arg & REGISTR) // регистр
+        if (bit_arg & REGISTR)                                                  // регистр
         {
-            //printf("%d - reg\n", (int) proc->code[proc->ip++]);
             which_push += proc->registers[(int) proc->code[proc->ip++]];
         }
-        if (bit_arg & NUMBER) // число .............
+        if (bit_arg & NUMBER)                                                   // число
         {
             which_push += proc->code[proc->ip++];
         }
 
-        return &proc->ram[(int) which_push]; // указатель на ячейку
+        return &proc->ram[(int) which_push]; // указатель на яч в оп памяти
     }
-    else // только регистр
+    else                                                                     // Только регистр
     {
         int arg = (int) proc->code[proc->ip++];
-        return &proc->registers[arg];
-        //stack_pop(&proc->stack, &proc->registers[arg]);
+        return &proc->registers[arg];        // указатель на регистр
     }
-    
-    // if (bit_arg & RAM) 
-    // {
-    //     which_push = proc->ram[(int) which_push];
-    // }
-
-    //return which_push;
 }
 
 
@@ -326,34 +282,19 @@ void to_do_push(SPU* proc)
 {
     int bit_arg = (int) proc->code[proc->ip++] & 224; 
 
-    // StackElem_t which_push = 0;
-    
-    // if (bit_arg & REGISTR) // регистр
-    // {
-    //     which_push += proc->registers[(int) proc->code[proc->ip++]];
-    // }
-    // if (bit_arg & NUMBER) // число .............
-    // {
-    //     which_push += proc->code[proc->ip++];
-    // }
-
-    stack_push(&proc->stack, get_arg(proc, bit_arg));
+    stack_push(&proc->stack, get_arg_push(proc, bit_arg));
 }
 
 
 void to_do_pop(SPU* proc)
 {
     int bit_arg = (int) proc->code[proc->ip++] & 224;
-    // int arg = (int) proc->code[proc->ip++];
+
     StackElem_t last_elem = 0;
-    stack_pop(&proc->stack, &last_elem);
+    stack_pop(&proc->stack, &last_elem); // Вытаскиваем элемент
 
-    StackElem_t* uk = get_arg_pop(proc, bit_arg);
-
-    *uk = last_elem;
-
-    //proc->registers[arg] = (&proc->stack)->arr[(&proc->stack)->size-1];
-    // stack_pop(&proc->stack, &proc->registers[arg]); // Это сработает, если там все из char?
+    StackElem_t* place_to_put = get_arg_pop(proc, bit_arg); // Место, куда pop должен положить
+    *place_to_put = last_elem;
 }
 
 
@@ -388,7 +329,7 @@ void to_do_calculate(SPU* proc, MashineCode operation)
         }
     default:
         {
-        printf("Тут надо вернуть код ошибки...\nКороче у вас ошибка синтаксиса\n");
+        printf("Синтаксическая ошибка\n");
         break;
         }
     }
@@ -411,19 +352,6 @@ void to_do_in(SPU* proc)
     
     stack_push(&proc->stack, arg);
 }
-
-/*
-// void to_do_any_jump(SPU* proc, MashineCode jump_type)
-// {
-    
-//     StackElem_t elem1 = 0;
-//     StackElem_t elem2 = 0;
-    
-//     stack_pop(&proc->stack, &elem1); // Удаляем
-//     stack_pop(&proc->stack, &elem2); // Удаляем
-// }
-*/
-
 
 
 
@@ -460,37 +388,11 @@ void to_do_jump_with_criteria(SPU* proc, MashineCode operation)
         break;
         }
     default:
-        printf("Какая-то ошибка. Синтаксическая\n");
+        printf("Синтаксическая ошибка\n");
     }
 
     if (correctness_condition) proc->ip = (size_t) proc->code[++(proc->ip)];
     else                       proc->ip += 2;
-}
-
-
-// void put_jump_commands(MashineCode jump_type, FILE* file_code, SPU* proc)
-// {
-//     proc->code[proc->ip++] = jump_type;
-//     int arg = 0;
-//     fscanf(file_code, "%d", &arg);
-//     proc->code[proc->ip++] = arg;
-// }
-
-
-void put_arguments(FILE* file_code, SPU* proc, int bit_arg) // кладет в code
-{
-    if (bit_arg & REGISTR) // регистр
-    {
-        StackElem_t arg = 0;
-        fscanf(file_code, "%lg", &arg); 
-        proc->code[proc->ip++] = arg;
-    }
-    if (bit_arg & NUMBER)
-    {
-        StackElem_t arg = 0;
-        fscanf(file_code, "%lg", &arg); 
-        proc->code[proc->ip++] = arg;
-    }
 }
 
 
