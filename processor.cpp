@@ -26,7 +26,7 @@ enum MashineCode
 {
     HLT = 0,
     PUSH,
-    PUSHR,
+    PUSHR, // Уже не нужен
     POP,
     ADD,
     SUB,
@@ -37,7 +37,9 @@ enum MashineCode
     JB,
     JE,
     JNE,
-    IN
+    IN,
+    OUTC, 
+    DRAW
 };
 
 // enum MathOperation
@@ -60,7 +62,17 @@ struct SPU
     Stack stack; 
     StackElem_t registers[5];  // это норм тип для них?
 
-    StackElem_t ram[RAM_SIZE];
+    //StackElem_t ram[RAM_SIZE];
+    char ram[RAM_SIZE]; // Работа с этим держится только на том, что рассматриваем, что там лежат double
+    //                     То есть ACCII там тоже double, потому что POP только StackElem_t кладет
+    //                     Это можно как-то исправить?
+    //                     Делать "разные" POP (c доп аргументом) для разных типов? Или указывать сколько байт занимает элемент?
+
+    //                     Повтор мыслей:
+    //                     Но в стеке все равно один тип... А вся эта дичь неизбежно через него проходит
+    //                     Можно вытаскивать из стека, преобразовывая тип, но тогдп надо знать во что преобразовывать.
+    //                     То есть доп аргумент нужен для POP 
+    // char* ram;
 };
 
 
@@ -76,6 +88,8 @@ void to_do_calculate(SPU* proc, MashineCode operation);
 
 
 void to_do_out (SPU* proc);
+void to_do_outc(SPU* proc);
+void to_do_draw(SPU* proc);
 void to_do_in  (SPU* proc);
 
 StackElem_t get_arg_push(SPU* proc, int bit_arg);
@@ -91,9 +105,18 @@ void put_jump_commands(MashineCode jump_type, FILE* file_code, SPU* proc);
 int main() 
 {
     SPU proc = {};
-    proc.ram[5] = 500;
-    proc.ram[2] = 200;
-    proc.ram[3] = 300;
+    // proc.ram = (char*) calloc(RAM_SIZE, sizeof(char));
+    // proc.ram[5] = 5;
+    // *(StackElem_t*)(proc.ram + 5) = 5;
+    // // proc.ram[2] = 2;
+    // *(StackElem_t*)(proc.ram + 20) = 2;
+    // // proc.ram[3] = 3;
+    // *(StackElem_t*)(proc.ram + 30) = 3;
+
+    // *(StackElem_t*)(proc.ram + 5) = 5;
+    // *(StackElem_t*)(proc.ram + 2) = 2;
+    // *(StackElem_t*)(proc.ram + 3) = 3;
+
     size_t size_code = read_file_code(&proc);
 
     print_code(proc.code, size_code);
@@ -166,6 +189,14 @@ void run_code(SPU* proc)
             to_do_out(proc);
             break;
         }
+
+        case OUTC: 
+        {
+            // printf("OUTC\n");
+            proc->ip++;
+            to_do_outc(proc);
+            break;
+        }
         
         case IN: // push в стек то, что вводим с клавиатуры
         {
@@ -188,6 +219,14 @@ void run_code(SPU* proc)
             to_do_jump_with_criteria(proc, command);
             break;
         }
+
+        case DRAW: 
+        {
+            // printf("DRAW\n");
+            proc->ip++;
+            to_do_draw(proc);
+            break;
+        }
         
         case HLT:
         {
@@ -205,7 +244,7 @@ void run_code(SPU* proc)
         }
         }
 
-        //print_stack_info(&proc->stack, OK);
+        // print_stack_info(&proc->stack, OK);
 
     }
 }
@@ -243,10 +282,13 @@ StackElem_t get_arg_push(SPU* proc, int bit_arg) // Возвращает зна�
     {
         which_push += proc->code[proc->ip++];
     }
-    if (bit_arg & RAM)    // число 
+    if (bit_arg & RAM)    // оперативная память (из нее пытаются достать StackElem_t)
     {
-        which_push = proc->ram[(int) which_push];
+        //which_push = proc->ram[(int) which_push];
+        which_push = *(StackElem_t*) (proc->ram + (int) which_push);
     }
+    //printf("%g - which push\n", which_push);
+    //printf("%g - which push\n", *(StackElem_t*) (proc->ram + (int) which_push));
 
     return which_push;
 }
@@ -268,7 +310,8 @@ StackElem_t* get_arg_pop(SPU* proc, int bit_arg) // Возвращает ука�
             which_push += proc->code[proc->ip++];
         }
 
-        return &proc->ram[(int) which_push]; // указатель на яч в оп памяти
+        //return (StackElem_t*) &proc->ram[(int) which_push]; // указатель на яч в оп памяти
+        return (StackElem_t*) (proc->ram + (int) which_push); // StackElem_t* ли мы хотим???
     }
     else                                                                     // Только регистр
     {
@@ -341,7 +384,22 @@ void to_do_out(SPU* proc)
     StackElem_t elem = 0;
     stack_pop(&proc->stack, &elem);
 
-    printf("%g - это результат\n", elem);
+    printf("%d - это результат\n", (int) elem); // УБРАТЬ INT
+}
+
+void to_do_outc(SPU* proc)
+{
+    StackElem_t elem = 0;
+    stack_pop(&proc->stack, &elem);
+
+    printf("%c", (int) elem);
+}
+
+void to_do_draw(SPU* proc)  // как же это плохо..................
+{
+    int num = (int) proc->code[proc->ip++];
+
+    for (int i = 0; i < num * 8; i += 8) printf("%c", (int) *(StackElem_t*) (proc->ram + i));
 }
 
 void to_do_in(SPU* proc)

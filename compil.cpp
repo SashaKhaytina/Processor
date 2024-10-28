@@ -51,7 +51,7 @@ enum MashineCode
 {
     HLT = 0,
     PUSH,
-    PUSHR,
+    PUSHR, // Уже не нужен
     POP,
     ADD,
     SUB,
@@ -62,7 +62,9 @@ enum MashineCode
     JB,
     JE,
     JNE,
-    IN
+    IN,
+    OUTC, 
+    DRAW
 };
 
 const size_t MAX_CODE_SIZE        = 10000;             // Максимальная длина массива с кодом
@@ -96,7 +98,7 @@ struct Asm_SPU
     int ip;
     Labels labels;
 
-    double ram[RAM_SIZE]; // он должен быть определенного типа?
+    //double ram[RAM_SIZE]; // он должен быть определенного типа?
 };
 
 
@@ -113,6 +115,7 @@ void stack_command    (FILE* file_asm, Asm_SPU* proc, MashineCode type_command);
 
 int  find_label_ip    (Labels* labels, char label_name[]);
 void put_jump_commands(MashineCode jump_type, FILE* file_asm, Asm_SPU* proc);
+void put_draw_command (FILE* file_asm, Asm_SPU* proc);
 
 IndexRegisters index_of_register(char arg[]);
 void check_and_put_in_right_order(Asm_SPU* proc, char arg_1[], char arg_2[]);
@@ -184,6 +187,8 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
         CHECK_COMMAND("MUL") FILL_CODE_FUNC_WITH_NO_ARG(MUL)
 
         CHECK_COMMAND("OUT") FILL_CODE_FUNC_WITH_NO_ARG(OUT)
+
+        CHECK_COMMAND("OUTC") FILL_CODE_FUNC_WITH_NO_ARG(OUTC)
     
         CHECK_COMMAND("IN") FILL_CODE_FUNC_WITH_NO_ARG(IN)
 
@@ -214,6 +219,12 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
         CHECK_COMMAND("JNE")
         {
             put_jump_commands(JNE, file_asm, proc);
+            continue;
+        }
+
+        CHECK_COMMAND("DRAW")
+        {
+            put_draw_command(file_asm, proc);
             continue;
         }
 
@@ -377,7 +388,13 @@ void put_jump_commands(MashineCode jump_type, FILE* file_asm, Asm_SPU* proc)
 }
 
 
-
+void put_draw_command (FILE* file_asm, Asm_SPU* proc)
+{
+    proc->code[proc->ip++] = DRAW;
+    int arg = 0;
+    fscanf(file_asm, "%d", &arg);
+    proc->code[proc->ip++] = (double) arg;
+}
 
 
 
