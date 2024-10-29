@@ -1,14 +1,20 @@
 // Порядок запуска:
+// g++ Assembler/compil.cpp Assembler/working_with_code.cpp Assembler/working_with_labels.cpp Assembler/commands.cpp
 // g++ compil.cpp
 // ./a.out
 // g++ processor.cpp Stack/stack_commands.cpp Stack/errors.cpp Stack/utils.cpp -D_DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggressive-loop-optimizations -Wc++14-compat -Wmissing-declarations -Wcast-align -Wcast-qual -Wchar-subscripts -Wconditionally-supported -Wconversion -Wctor-dtor-privacy -Wempty-body -Wfloat-equal -Wformat-nonliteral -Wformat-security -Wformat-signedness -Wformat=2 -Winline -Wlogical-op -Wnon-virtual-dtor -Wopenmp-simd -Woverloaded-virtual -Wpacked -Wpointer-arith -Winit-self -Wredundant-decls -Wshadow -Wsign-conversion -Wsign-promo -Wstrict-null-sentinel -Wstrict-overflow=2 -Wsuggest-attribute=noreturn -Wsuggest-final-methods -Wsuggest-final-types -Wsuggest-override -Wswitch-default -Wswitch-enum -Wsync-nand -Wundef -Wunreachable-code -Wunused -Wuseless-cast -Wvariadic-macros -Wno-literal-suffix -Wno-missing-field-initializers -Wno-narrowing -Wno-old-style-cast -Wno-varargs -Wstack-protector -fcheck-new -fsized-deallocation -fstack-protector -fstrict-overflow -flto-odr-type-merging -fno-omit-frame-pointer -Wlarger-than=8000 -Wstack-usage=8192 -pie -fPIE -Werror=vla -fsanitize=address,alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,integer-divide-by-zero,leak,nonnull-attribute,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,undefined,unreachable,vla-bound,vptr -o processor
 // ./processor
 
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
+// #include <stdio.h>
+// #include <stdlib.h>
+// #include <string.h>
+// #include <ctype.h>
+
+
+#include "header_asm.h"
+
+#include "working_with_code.h"
 
 // TODO: добавить call, ret, structs array, div (деление), sqrt + сделать квадратку и факториал с функциями
 
@@ -27,99 +33,103 @@
     //     continue;
     // }
 
-#define CHECK_COMMAND(commanda) if (strcmp(command, commanda) == 0)
-#define FILL_CODE_FUNC_WITH_NO_ARG(command) {\
-                                                code[(*ip)++] = command;\
-                                                continue;\
-                                             }
-
-enum ArgType
-{
-    REGISTER = 1 << 7, // Это только для double!!!!??
-    NUMBER = 1 << 6,
-    RAM = 1 << 5
-};
-
-enum IndexRegisters 
-{
-    RAX,
-    RBX,
-    RCX, 
-    RDX,
-    REX,
-};
-
-enum MashineCode
-{
-    HLT = 0,
-    PUSH,
-    POP,
-    ADD,
-    SUB,
-    MUL, 
-    OUT, 
-    JUMP,
-    JA,
-    JB,
-    JE,
-    JNE,
-    IN,
-    OUTC, 
-    DRAW, 
-    CALL, // кладет в стек ip откуда прыгнул (свой ip + 1) и прыгфет по метке
-    RET // прыгает по последнему элементу стека ()
-};
-
-const size_t MAX_CODE_SIZE        = 10000;             // Максимальная длина массива с кодом
-const size_t MAX_NAME_LABEL_SIZE  = 50;                // Максимальная длина ИМЕНИ МЕТКИ
-const size_t MAX_LABELS_MASS_SIZE = 10;                // Максимальная длина массива меток
-const size_t MAX_COMMAND_SIZE     = 50;                // Максимальная длина ИМЕНИ КОМАНДЫ 
-const size_t MAX_ARG_COMMAND_SIZE = 50;                // Максимальная длина АРГУМЕНТА КОМАНДЫ (кол-во символов)
-const size_t RAM_SIZE             = 10000;             // Размер оперативной памяти
-const char* const FILE_NAME       = "program_asm.txt"; 
-const char* const READ_FILE_NAME  = "program_code.txt";
 
 
 
-struct Label
-{
-    char name[MAX_NAME_LABEL_SIZE];
-    int number_command;
-};
-
-struct Labels
-{
-    Label arr[MAX_LABELS_MASS_SIZE];
-    size_t size;
-};
 
 
-struct Asm_SPU
-{
-    double code[MAX_CODE_SIZE];
-    size_t size_code;
-    int ip;
-    Labels labels;
-};
+
+// #define CHECK_COMMAND(commanda) if (strcmp(command, commanda) == 0)
+// #define FILL_CODE_FUNC_WITH_NO_ARG(command) {\
+//                                                 code[(*ip)++] = command;\
+//                                                 continue;\
+//                                              }
+
+// enum ArgType
+// {
+//     REGISTER = 1 << 7, // Это только для double!!!!??
+//     NUMBER = 1 << 6,
+//     RAM = 1 << 5
+// };
+
+// enum IndexRegisters 
+// {
+//     RAX,
+//     RBX,
+//     RCX, 
+//     RDX,
+//     REX,
+// };
+
+// enum MashineCode
+// {
+//     HLT = 0,
+//     PUSH,
+//     POP,
+//     ADD,
+//     SUB,
+//     MUL, 
+//     OUT, 
+//     JUMP,
+//     JA,
+//     JB,
+//     JE,
+//     JNE,
+//     IN,
+//     OUTC, 
+//     DRAW, 
+//     CALL, // кладет в стек ip откуда прыгнул (свой ip + 1) и прыгфет по метке
+//     RET // прыгает по последнему элементу стека ()
+// };
+
+// const size_t MAX_CODE_SIZE        = 10000;             // Максимальная длина массива с кодом
+// const size_t MAX_NAME_LABEL_SIZE  = 50;                // Максимальная длина ИМЕНИ МЕТКИ
+// const size_t MAX_LABELS_MASS_SIZE = 10;                // Максимальная длина массива меток
+// const size_t MAX_COMMAND_SIZE     = 50;                // Максимальная длина ИМЕНИ КОМАНДЫ 
+// const size_t MAX_ARG_COMMAND_SIZE = 50;                // Максимальная длина АРГУМЕНТА КОМАНДЫ (кол-во символов)
+// const size_t RAM_SIZE             = 10000;             // Размер оперативной памяти
+// const char* const FILE_NAME       = "program_asm.txt"; 
+// const char* const READ_FILE_NAME  = "program_code.txt";
 
 
-void labels_ctor(Labels* labels);
 
-int code_put         (int argc, const char *argv[], Asm_SPU* proc, int run_num);
-void print_code      (double code[], size_t size_code);
-void code_output_file(Asm_SPU* proc);
+// struct Label
+// {
+//     char name[MAX_NAME_LABEL_SIZE];
+//     int number_command;
+// };
+
+// struct Labels
+// {
+//     Label arr[MAX_LABELS_MASS_SIZE];
+//     size_t size;
+// };
 
 
-void create_new_label (Asm_SPU* proc, char label_name[]);
+// struct Asm_SPU
+// {
+//     double code[MAX_CODE_SIZE];
+//     size_t size_code;
+//     int ip;
+//     Labels labels;
+// };
 
-void stack_command    (FILE* file_asm, Asm_SPU* proc, MashineCode type_command);
+// Работа с code
+// int  code_put        (int argc, const char *argv[], Asm_SPU* proc, int run_num);
+// void print_code      (double code[], size_t size_code);
+// void code_output_file(Asm_SPU* proc);
 
-int  find_label_ip    (Labels* labels, char label_name[]);
-void put_jump_commands(MashineCode jump_type, FILE* file_asm, Asm_SPU* proc);
-void put_draw_command (FILE* file_asm, Asm_SPU* proc);
+// Работа с метками
+// void create_new_label (Asm_SPU* proc, char label_name[]);
+// int  find_label_ip    (Labels* labels, char label_name[]);
 
-IndexRegisters index_of_register(char arg[]);
-void check_and_put_in_right_order(Asm_SPU* proc, char arg_1[], char arg_2[]);
+// // команды
+// void stack_command    (FILE* file_asm, Asm_SPU* proc, MashineCode type_command);
+// void put_jump_commands(MashineCode jump_type, FILE* file_asm, Asm_SPU* proc);
+// void put_draw_command (FILE* file_asm, Asm_SPU* proc);
+
+// IndexRegisters index_of_register(char arg[]);
+// void check_and_put_in_right_order(Asm_SPU* proc, char arg_1[], char arg_2[]);
 
 
 
@@ -139,278 +149,278 @@ int main(int argc, const char *argv[])
 
 
 
-int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
-{
-    Labels* labels = &proc->labels;
-    double* code = proc->code;
+// int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
+// {
+//     Labels* labels = &proc->labels;
+//     double* code = proc->code;
 
-    proc->ip = 0;
-    int* ip = &proc->ip;
+//     proc->ip = 0;
+//     int* ip = &proc->ip;
 
-    FILE* file_asm = NULL;
+//     FILE* file_asm = NULL;
     
 
-    if (argc != 1) file_asm = fopen(argv[1], "r");
-    else file_asm = fopen(FILE_NAME, "r");
+//     if (argc != 1) file_asm = fopen(argv[1], "r");
+//     else file_asm = fopen(FILE_NAME, "r");
 
-    // |mem|reg|imm|
+//     // |mem|reg|imm|
 
-    char command[MAX_COMMAND_SIZE] = {};
+//     char command[MAX_COMMAND_SIZE] = {};
 
-    while(fscanf(file_asm, "%s", command) != EOF) 
-    {
-        size_t len_str = strlen(command);
+//     while(fscanf(file_asm, "%s", command) != EOF) 
+//     {
+//         size_t len_str = strlen(command);
 
-        if (command[len_str - 1] == ':')
-        {
-            command[len_str - 1] = '\0';
-            if (run_num == 1) create_new_label(proc, command);
+//         if (command[len_str - 1] == ':')
+//         {
+//             command[len_str - 1] = '\0';
+//             if (run_num == 1) create_new_label(proc, command);
 
-            continue;
-        }
+//             continue;
+//         }
 
-        // struct CommandWithArg {
-        //     const char*;
-        //     enum;
-        //     foo;
-        // }
+//         // struct CommandWithArg {
+//         //     const char*;
+//         //     enum;
+//         //     foo;
+//         // }
 
-        // strcmp(const char*) foo(file_asm, proc, enum)
+//         // strcmp(const char*) foo(file_asm, proc, enum)
 
-        // {{"PUSH", PUSH, stack_command},  {"JA", JA, put_jump_commands}}
+//         // {{"PUSH", PUSH, stack_command},  {"JA", JA, put_jump_commands}}
 
-        CHECK_COMMAND("PUSH")
-        {
-            stack_command(file_asm, proc, PUSH);
-            continue;
-        }
+//         CHECK_COMMAND("PUSH")
+//         {
+//             stack_command(file_asm, proc, PUSH);
+//             continue;
+//         }
 
-        CHECK_COMMAND("POP")
-        {
-            stack_command(file_asm, proc, POP);
-            continue;
-        }
+//         CHECK_COMMAND("POP")
+//         {
+//             stack_command(file_asm, proc, POP);
+//             continue;
+//         }
 
-        CHECK_COMMAND("ADD") FILL_CODE_FUNC_WITH_NO_ARG(ADD)
+//         CHECK_COMMAND("ADD") FILL_CODE_FUNC_WITH_NO_ARG(ADD)
 
-        CHECK_COMMAND("SUB") FILL_CODE_FUNC_WITH_NO_ARG(SUB)
+//         CHECK_COMMAND("SUB") FILL_CODE_FUNC_WITH_NO_ARG(SUB)
 
-        CHECK_COMMAND("MUL") FILL_CODE_FUNC_WITH_NO_ARG(MUL)
+//         CHECK_COMMAND("MUL") FILL_CODE_FUNC_WITH_NO_ARG(MUL)
 
-        CHECK_COMMAND("OUT") FILL_CODE_FUNC_WITH_NO_ARG(OUT)
+//         CHECK_COMMAND("OUT") FILL_CODE_FUNC_WITH_NO_ARG(OUT)
 
-        CHECK_COMMAND("OUTC") FILL_CODE_FUNC_WITH_NO_ARG(OUTC)
+//         CHECK_COMMAND("OUTC") FILL_CODE_FUNC_WITH_NO_ARG(OUTC)
     
-        CHECK_COMMAND("IN") FILL_CODE_FUNC_WITH_NO_ARG(IN)
+//         CHECK_COMMAND("IN") FILL_CODE_FUNC_WITH_NO_ARG(IN)
 
-        CHECK_COMMAND("JUMP")
-        {
-            put_jump_commands(JUMP, file_asm, proc);
-            continue;
-        }
+//         CHECK_COMMAND("JUMP")
+//         {
+//             put_jump_commands(JUMP, file_asm, proc);
+//             continue;
+//         }
 
-        CHECK_COMMAND("JA")
-        {
-            put_jump_commands(JA, file_asm, proc);
-            continue;
-        }
+//         CHECK_COMMAND("JA")
+//         {
+//             put_jump_commands(JA, file_asm, proc);
+//             continue;
+//         }
 
-        CHECK_COMMAND("JB")
-        {
-            put_jump_commands(JB, file_asm, proc);
-            continue;
-        }
+//         CHECK_COMMAND("JB")
+//         {
+//             put_jump_commands(JB, file_asm, proc);
+//             continue;
+//         }
 
-        CHECK_COMMAND("JE")
-        {
-            put_jump_commands(JE, file_asm, proc);
-            continue;
-        }
+//         CHECK_COMMAND("JE")
+//         {
+//             put_jump_commands(JE, file_asm, proc);
+//             continue;
+//         }
 
-        CHECK_COMMAND("JNE")
-        {
-            put_jump_commands(JNE, file_asm, proc);
-            continue;
-        }
+//         CHECK_COMMAND("JNE")
+//         {
+//             put_jump_commands(JNE, file_asm, proc);
+//             continue;
+//         }
 
-        CHECK_COMMAND("DRAW")
-        {
-            put_draw_command(file_asm, proc);
-            continue;
-        }
+//         CHECK_COMMAND("DRAW")
+//         {
+//             put_draw_command(file_asm, proc);
+//             continue;
+//         }
 
-        CHECK_COMMAND("CALL")
-        {
-            put_jump_commands(CALL, file_asm, proc);
-            continue;
-        }
+//         CHECK_COMMAND("CALL")
+//         {
+//             put_jump_commands(CALL, file_asm, proc);
+//             continue;
+//         }
 
-        CHECK_COMMAND("RET") FILL_CODE_FUNC_WITH_NO_ARG(RET)
+//         CHECK_COMMAND("RET") FILL_CODE_FUNC_WITH_NO_ARG(RET)
 
-        CHECK_COMMAND("HLT") FILL_CODE_FUNC_WITH_NO_ARG(HLT)        
-    }
-    fclose(file_asm);
+//         CHECK_COMMAND("HLT") FILL_CODE_FUNC_WITH_NO_ARG(HLT)        
+//     }
+//     fclose(file_asm);
 
-    return *ip;
-}
-
-
-void print_code(double code[], size_t size_code)
-{
-    for (size_t i = 0; i < size_code; i++)
-    {
-        printf("%g ", code[i]);
-    }
-    printf("\n");
-}
+//     return *ip;
+// }
 
 
-void code_output_file(Asm_SPU* proc)
-{
-    FILE* file_code = fopen(READ_FILE_NAME, "w");
-
-    for (size_t i = 0; i < proc->size_code; i++)
-    {
-        fprintf(file_code, "%lg ", proc->code[i]);
-    }
-    printf("\n");
-}
+// void print_code(double code[], size_t size_code)
+// {
+//     for (size_t i = 0; i < size_code; i++)
+//     {
+//         printf("%g ", code[i]);
+//     }
+//     printf("\n");
+// }
 
 
-void create_new_label(Asm_SPU* proc, char label_name[])
-{
-    Label* new_label = &(&proc->labels)->arr[(&proc->labels)->size];
-    strcpy(new_label->name, label_name);
+// void code_output_file(Asm_SPU* proc)
+// {
+//     FILE* file_code = fopen(READ_FILE_NAME, "w");
 
-    new_label->number_command = proc->ip;
+//     for (size_t i = 0; i < proc->size_code; i++)
+//     {
+//         fprintf(file_code, "%lg ", proc->code[i]);
+//     }
+//     printf("\n");
+// }
+
+
+// void create_new_label(Asm_SPU* proc, char label_name[])
+// {
+//     Label* new_label = &(&proc->labels)->arr[(&proc->labels)->size];
+//     strcpy(new_label->name, label_name);
+
+//     new_label->number_command = proc->ip;
     
-    (&proc->labels)->size++;
-}
+//     (&proc->labels)->size++;
+// }
 
 
-void stack_command(FILE* file_asm, Asm_SPU* proc, MashineCode type_command)
-{
-    proc->code[proc->ip] = type_command;
-    char arg_1[MAX_ARG_COMMAND_SIZE] = {}; 
-    char arg_2[MAX_ARG_COMMAND_SIZE] = {};
+// void stack_command(FILE* file_asm, Asm_SPU* proc, MashineCode type_command)
+// {
+//     proc->code[proc->ip] = type_command;
+//     char arg_1[MAX_ARG_COMMAND_SIZE] = {}; 
+//     char arg_2[MAX_ARG_COMMAND_SIZE] = {};
 
-    int count_args = fscanf(file_asm, "%s + %s", arg_1, arg_2);
+//     int count_args = fscanf(file_asm, "%s + %s", arg_1, arg_2);
 
-    if (count_args == 2)  // Два аргуманта (сумма (в любом порядке))
-    {
-        if (arg_1[0] == '[' && arg_2[strlen(arg_2) - 1] == ']') // если есть [] (оперативная память)
-        {
-            proc->code[(proc->ip)++] += REGISTER + NUMBER + RAM;
+//     if (count_args == 2)  // Два аргуманта (сумма (в любом порядке))
+//     {
+//         if (arg_1[0] == '[' && arg_2[strlen(arg_2) - 1] == ']') // если есть [] (оперативная память)
+//         {
+//             proc->code[(proc->ip)++] += REGISTER + NUMBER + RAM;
 
-            strcpy(arg_1, &arg_1[1]);
-            arg_2[strlen(arg_2) - 1] = '\0';
-        }
-        else
-        {
-            if (type_command == POP)
-            {
-                printf("Синтаксическая ошибка\n"); // в pop нельзя подавать сумму без квадратныx скобок
-            }
-            else // PUSH
-            {
-                proc->code[(proc->ip)++] += REGISTER + NUMBER;
-            }
-        }
+//             strcpy(arg_1, &arg_1[1]);
+//             arg_2[strlen(arg_2) - 1] = '\0';
+//         }
+//         else
+//         {
+//             if (type_command == POP)
+//             {
+//                 printf("Синтаксическая ошибка\n"); // в pop нельзя подавать сумму без квадратныx скобок
+//             }
+//             else // PUSH
+//             {
+//                 proc->code[(proc->ip)++] += REGISTER + NUMBER;
+//             }
+//         }
 
-        check_and_put_in_right_order(proc, arg_1, arg_2);
-    }
+//         check_and_put_in_right_order(proc, arg_1, arg_2);
+//     }
 
-    else if (count_args == 1) // один аргумент
-    {
-        if (arg_1[0] == '[' && arg_1[strlen(arg_1) - 1] == ']')   // Опреативная память
-        {
-            proc->code[proc->ip] += RAM;
+//     else if (count_args == 1) // один аргумент
+//     {
+//         if (arg_1[0] == '[' && arg_1[strlen(arg_1) - 1] == ']')   // Опреативная память
+//         {
+//             proc->code[proc->ip] += RAM;
 
-            strcpy(arg_1, &arg_1[1]);
-            arg_1[strlen(arg_1) - 1] = '\0';
-        }
-
-
-        if (isalpha(arg_1[0]))                                    // Регистр
-        {
-            proc->code[(proc->ip)++] += REGISTER;
-            proc->code[(proc->ip)++] = index_of_register(arg_1);
-        }
-        else                                                      // Число
-        {
-            if (type_command == POP && proc->code[proc->ip] == POP) // У pop должен быть еще RAM
-            {
-                printf("Синтаксическая ошибка\n");
-            }
-            else
-            {
-                proc->code[(proc->ip)++] += NUMBER;
-                proc->code[(proc->ip)++] = atof(arg_1);
-            }
-        }
-    }
-
-    else
-    {
-        printf("Синтаксическая ошибка\n"); 
-    }
-}
+//             strcpy(arg_1, &arg_1[1]);
+//             arg_1[strlen(arg_1) - 1] = '\0';
+//         }
 
 
-int find_label_ip(Labels* labels, char label_name[]) 
-{
-    for (size_t i = 0; i < labels->size; i++)
-    {
-        if (strcmp(label_name, labels->arr[i].name) == 0) return labels->arr[i].number_command;
-    }
-    return -1;
-}
+//         if (isalpha(arg_1[0]))                                    // Регистр
+//         {
+//             proc->code[(proc->ip)++] += REGISTER;
+//             proc->code[(proc->ip)++] = index_of_register(arg_1);
+//         }
+//         else                                                      // Число
+//         {
+//             if (type_command == POP && proc->code[proc->ip] == POP) // У pop должен быть еще RAM
+//             {
+//                 printf("Синтаксическая ошибка\n");
+//             }
+//             else
+//             {
+//                 proc->code[(proc->ip)++] += NUMBER;
+//                 proc->code[(proc->ip)++] = atof(arg_1);
+//             }
+//         }
+//     }
+
+//     else
+//     {
+//         printf("Синтаксическая ошибка\n"); 
+//     }
+// }
 
 
-void check_and_put_in_right_order(Asm_SPU* proc, char arg_1[], char arg_2[])
-{
-    if (isalpha(arg_1[0]))
-    {
-        proc->code[(proc->ip)++] = index_of_register(arg_1);
-        proc->code[(proc->ip)++] = atof(arg_2);
-    }
-    else
-    {
-        proc->code[(proc->ip)++] = index_of_register(arg_2);
-        proc->code[(proc->ip)++] = atof(arg_1);
-    }
-}
+// int find_label_ip(Labels* labels, char label_name[]) 
+// {
+//     for (size_t i = 0; i < labels->size; i++)
+//     {
+//         if (strcmp(label_name, labels->arr[i].name) == 0) return labels->arr[i].number_command;
+//     }
+//     return -1;
+// }
 
 
-IndexRegisters index_of_register(char arg[])
-{
-    if      (strcmp(arg, "RAX") == 0) return RAX;
-    else if (strcmp(arg, "RBX") == 0) return RBX;
-    else if (strcmp(arg, "RCX") == 0) return RCX;
-    else if (strcmp(arg, "RDX") == 0) return RDX;
-    else if (strcmp(arg, "REX") == 0) return REX;
-    return RAX; // unreachable
-}
+// void check_and_put_in_right_order(Asm_SPU* proc, char arg_1[], char arg_2[])
+// {
+//     if (isalpha(arg_1[0]))
+//     {
+//         proc->code[(proc->ip)++] = index_of_register(arg_1);
+//         proc->code[(proc->ip)++] = atof(arg_2);
+//     }
+//     else
+//     {
+//         proc->code[(proc->ip)++] = index_of_register(arg_2);
+//         proc->code[(proc->ip)++] = atof(arg_1);
+//     }
+// }
 
 
-void put_jump_commands(MashineCode jump_type, FILE* file_asm, Asm_SPU* proc)
-{
-    proc->code[proc->ip++] = jump_type;
+// IndexRegisters index_of_register(char arg[])
+// {
+//     if      (strcmp(arg, "RAX") == 0) return RAX;
+//     else if (strcmp(arg, "RBX") == 0) return RBX;
+//     else if (strcmp(arg, "RCX") == 0) return RCX;
+//     else if (strcmp(arg, "RDX") == 0) return RDX;
+//     else if (strcmp(arg, "REX") == 0) return REX;
+//     return RAX; // unreachable
+// }
 
-    char arg[MAX_NAME_LABEL_SIZE] = "";
-    fscanf(file_asm, "%s", arg);
 
-    proc->code[proc->ip++] = find_label_ip(&proc->labels, arg);
-}
+// void put_jump_commands(MashineCode jump_type, FILE* file_asm, Asm_SPU* proc)
+// {
+//     proc->code[proc->ip++] = jump_type;
+
+//     char arg[MAX_NAME_LABEL_SIZE] = "";
+//     fscanf(file_asm, "%s", arg);
+
+//     proc->code[proc->ip++] = find_label_ip(&proc->labels, arg);
+// }
 
 
-void put_draw_command (FILE* file_asm, Asm_SPU* proc)
-{
-    proc->code[proc->ip++] = DRAW;
-    int arg = 0;
-    fscanf(file_asm, "%d", &arg);
-    proc->code[proc->ip++] = (double) arg;
-}
+// void put_draw_command (FILE* file_asm, Asm_SPU* proc)
+// {
+//     proc->code[proc->ip++] = DRAW;
+//     int arg = 0;
+//     fscanf(file_asm, "%d", &arg);
+//     proc->code[proc->ip++] = (double) arg;
+// }
 
 
 

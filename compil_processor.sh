@@ -1,0 +1,1 @@
+g++ Processor/processor.cpp Processor/working_with_code_in_proc.cpp Processor/to_do_commands.cpp Stack/stack_commands.cpp Stack/errors.cpp Stack/utils.cpp -o processor
