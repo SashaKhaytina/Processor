@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <math.h>
 
 
 #include "Stack/stack_commands.h"
@@ -21,12 +22,18 @@ enum ArgType
     RAM = 1 << 5
 };
 
+enum Masks
+{
+    ONLY_COMMAND_NUM_MASK = 31,
+    ONLY_ELEM_TYPES_MASK = 224,
+};
+
+
 
 enum MashineCode
 {
     HLT = 0,
     PUSH,
-    PUSHR, // Уже не нужен
     POP,
     ADD,
     SUB,
@@ -39,7 +46,9 @@ enum MashineCode
     JNE,
     IN,
     OUTC, 
-    DRAW
+    DRAW,
+    CALL, // кладет в стек ip откуда прыгнул (свой ip + 1) и прыгфет по метке
+    RET // прыгает по последнему элементу стека ()
 };
 
 // enum MathOperation
@@ -52,7 +61,7 @@ enum MashineCode
 const size_t MAX_CODE_SIZE       = 10000;
 const char* const READ_FILE_NAME = "program_code.txt"; 
 const size_t RAM_SIZE            = 10000; 
-
+const double DELTA               = 1e-10;
 
 
 struct SPU
@@ -62,8 +71,8 @@ struct SPU
     Stack stack; 
     StackElem_t registers[5];  // это норм тип для них?
 
-    //StackElem_t ram[RAM_SIZE];
-    char ram[RAM_SIZE]; // Работа с этим держится только на том, что рассматриваем, что там лежат double
+    StackElem_t ram[RAM_SIZE];
+    //char ram[RAM_SIZE]; // Работа с этим держится только на том, что рассматриваем, что там лежат double
     //                     То есть ACCII там тоже double, потому что POP только StackElem_t кладет
     //                     Это можно как-то исправить?
     //                     Делать "разные" POP (c доп аргументом) для разных типов? Или указывать сколько байт занимает элемент?
@@ -91,12 +100,14 @@ void to_do_out (SPU* proc);
 void to_do_outc(SPU* proc);
 void to_do_draw(SPU* proc);
 void to_do_in  (SPU* proc);
+void to_do_call(SPU* proc);
+void to_do_ret (SPU* proc);
 
 StackElem_t get_arg_push(SPU* proc, int bit_arg);
 StackElem_t* get_arg_pop(SPU* proc, int bit_arg);
 
 
-void to_do_jump_with_criteria(SPU* proc, MashineCode operation);
+void to_do_conditional_jump(SPU* proc, MashineCode operation);
 
 void put_jump_commands(MashineCode jump_type, FILE* file_code, SPU* proc);
 
@@ -106,11 +117,11 @@ int main()
 {
     SPU proc = {};
     // proc.ram = (char*) calloc(RAM_SIZE, sizeof(char));
-    // proc.ram[5] = 5;
+     proc.ram[5] = 5;
     // *(StackElem_t*)(proc.ram + 5) = 5;
-    // // proc.ram[2] = 2;
+     proc.ram[2] = 2;
     // *(StackElem_t*)(proc.ram + 20) = 2;
-    // // proc.ram[3] = 3;
+     proc.ram[3] = 3;
     // *(StackElem_t*)(proc.ram + 30) = 3;
 
     // *(StackElem_t*)(proc.ram + 5) = 5;
@@ -141,7 +152,7 @@ void run_code(SPU* proc)
     while (continue_process)
     {
         // print_stack_info(&proc->stack, OK);
-        MashineCode command = (MashineCode) ((int)(proc->code[proc->ip]) & 31);
+        MashineCode command = (MashineCode) ((int)(proc->code[proc->ip]) & ONLY_COMMAND_NUM_MASK);
         switch (command)
         {
         case PUSH: 
@@ -158,27 +169,11 @@ void run_code(SPU* proc)
             break;
         }
         
-        case ADD: 
+        case ADD: case SUB: case MUL: 
         {
             // printf("ADD\n");
             proc->ip++;
-            to_do_calculate(proc, ADD);
-            break;
-        }
-        
-        case SUB:
-        {
-            // printf("SUB\n");
-            proc->ip++;
-            to_do_calculate(proc, SUB);
-            break;
-        }
-
-        case MUL:
-        {
-            // printf("MUL\n");
-            proc->ip++;
-            to_do_calculate(proc, MUL);
+            to_do_calculate(proc, command);
             break;
         }
 
@@ -209,14 +204,15 @@ void run_code(SPU* proc)
         case JUMP:
         {
             // printf("JUMP\n");
-            proc->ip = (size_t) proc->code[++(proc->ip)];
+            proc->ip++;
+            proc->ip = (size_t) proc->code[proc->ip];
             break;
         }
         
         case JA: case JB: case JE: case JNE:
         {
             // printf("ANOTHER JUMP\n");
-            to_do_jump_with_criteria(proc, command);
+            to_do_conditional_jump(proc, command);
             break;
         }
 
@@ -225,6 +221,22 @@ void run_code(SPU* proc)
             // printf("DRAW\n");
             proc->ip++;
             to_do_draw(proc);
+            break;
+        }
+
+        case CALL:
+        {
+            // printf("CALL\n");
+            proc->ip++;
+            to_do_call(proc);
+            break;
+        }
+
+        case RET:
+        {
+            // printf("RET\n");
+            proc->ip++;
+            to_do_ret(proc);
             break;
         }
         
@@ -284,8 +296,8 @@ StackElem_t get_arg_push(SPU* proc, int bit_arg) // Возвращает зна�
     }
     if (bit_arg & RAM)    // оперативная память (из нее пытаются достать StackElem_t)
     {
-        //which_push = proc->ram[(int) which_push];
-        which_push = *(StackElem_t*) (proc->ram + (int) which_push);
+        which_push = proc->ram[(int) which_push];
+        //which_push = *(StackElem_t*) (proc->ram + (int) which_push);
     }
     //printf("%g - which push\n", which_push);
     //printf("%g - which push\n", *(StackElem_t*) (proc->ram + (int) which_push));
@@ -296,8 +308,6 @@ StackElem_t get_arg_push(SPU* proc, int bit_arg) // Возвращает зна�
 
 StackElem_t* get_arg_pop(SPU* proc, int bit_arg) // Возвращает указатель на регистр или на ячейку в оперативной памяти
 {
-    StackElem_t* point_to_put = NULL;
-
     if (bit_arg & RAM)                                                       // Опреативная память
     {
         StackElem_t which_push = 0;
@@ -310,8 +320,8 @@ StackElem_t* get_arg_pop(SPU* proc, int bit_arg) // Возвращает ука�
             which_push += proc->code[proc->ip++];
         }
 
-        //return (StackElem_t*) &proc->ram[(int) which_push]; // указатель на яч в оп памяти
-        return (StackElem_t*) (proc->ram + (int) which_push); // StackElem_t* ли мы хотим???
+        return &proc->ram[(int) which_push]; // указатель на яч в оп памяти
+        //return (StackElem_t*) (proc->ram + (int) which_push); // StackElem_t* ли мы хотим???
     }
     else                                                                     // Только регистр
     {
@@ -323,7 +333,7 @@ StackElem_t* get_arg_pop(SPU* proc, int bit_arg) // Возвращает ука�
 
 void to_do_push(SPU* proc)
 {
-    int bit_arg = (int) proc->code[proc->ip++] & 224; 
+    int bit_arg = (int) proc->code[proc->ip++] & ONLY_ELEM_TYPES_MASK; 
 
     stack_push(&proc->stack, get_arg_push(proc, bit_arg));
 }
@@ -331,7 +341,7 @@ void to_do_push(SPU* proc)
 
 void to_do_pop(SPU* proc)
 {
-    int bit_arg = (int) proc->code[proc->ip++] & 224;
+    int bit_arg = (int) proc->code[proc->ip++] & ONLY_ELEM_TYPES_MASK; 
 
     StackElem_t last_elem = 0;
     stack_pop(&proc->stack, &last_elem); // Вытаскиваем элемент
@@ -399,7 +409,7 @@ void to_do_draw(SPU* proc)  // как же это плохо..................
 {
     int num = (int) proc->code[proc->ip++];
 
-    for (int i = 0; i < num * 8; i += 8) printf("%c", (int) *(StackElem_t*) (proc->ram + i));
+    for (int i = 0; i < num * 8; i += 8) printf("%c", (int) proc->ram[i]); //printf("%c", (int) *(StackElem_t*) (proc->ram + i));
 }
 
 void to_do_in(SPU* proc)
@@ -411,9 +421,22 @@ void to_do_in(SPU* proc)
     stack_push(&proc->stack, arg);
 }
 
+void to_do_call(SPU* proc)
+{
+    stack_push(&proc->stack, (StackElem_t)(proc->ip + 1));
+    proc->ip = (size_t) proc->code[proc->ip];
+    //stack_push(&proc->stack, proc->ip);
+}
+
+void to_do_ret (SPU* proc)
+{
+    StackElem_t elem1 = 0;
+    stack_pop(&proc->stack, &elem1);
+    proc->ip = (size_t) elem1; // прыжок на элемент из стека
+}
 
 
-void to_do_jump_with_criteria(SPU* proc, MashineCode operation)
+void to_do_conditional_jump(SPU* proc, MashineCode operation)
 {
     StackElem_t elem1 = 0;
     StackElem_t elem2 = 0;
@@ -437,16 +460,16 @@ void to_do_jump_with_criteria(SPU* proc, MashineCode operation)
         }
     case JE:
         {
-        correctness_condition = (elem2 == elem1);
+        correctness_condition = (fabs(elem2 - elem1) < DELTA);
         break;
         }
     case JNE:
         {
-        correctness_condition = (elem2 != elem1);
+        correctness_condition = (fabs(elem2 - elem1) > DELTA);
         break;
         }
     default:
-        printf("Синтаксическая ошибка\n");
+        printf("Синтаксическая ошибка\n"); 
     }
 
     if (correctness_condition) proc->ip = (size_t) proc->code[++(proc->ip)];

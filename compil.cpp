@@ -10,18 +10,20 @@
 #include <string.h>
 #include <ctype.h>
 
+// TODO: добавить call, ret, structs array, div (деление), sqrt + сделать квадратку и факториал с функциями
+
 // Должен переводить файл слов (асемблер) в файл с маш кодом (файл с цифрами)
 // в битовом формате принципиально в каком типе вводишь и читаешь?.....
 
 
 // #define CHECK_JUMP_COMMAND(commanda) strcmp(command, commanda) == 0
     // if (CHECK_JUMP_COMMAND("JUMP") || 
-    //     CHECK_JUMP_COMMAND("JUMP") || 
-    //     CHECK_JUMP_COMMAND("JUMP") || 
-    //     CHECK_JUMP_COMMAND("JUMP") || 
-    //     CHECK_JUMP_COMMAND("JUMP"))
+    //     CHECK_JUMP_COMMAND("JA") || 
+    //     CHECK_JUMP_COMMAND("JB") || 
+    //     CHECK_JUMP_COMMAND("JE") || 
+    //     CHECK_JUMP_COMMAND("JNE"))
     // {
-    //     put_jump_commands(JUMP, file_asm, proc);
+    //     put_jump_commands(commanda, file_asm, proc);
     //     continue;
     // }
 
@@ -51,7 +53,6 @@ enum MashineCode
 {
     HLT = 0,
     PUSH,
-    PUSHR, // Уже не нужен
     POP,
     ADD,
     SUB,
@@ -64,7 +65,9 @@ enum MashineCode
     JNE,
     IN,
     OUTC, 
-    DRAW
+    DRAW, 
+    CALL, // кладет в стек ip откуда прыгнул (свой ip + 1) и прыгфет по метке
+    RET // прыгает по последнему элементу стека ()
 };
 
 const size_t MAX_CODE_SIZE        = 10000;             // Максимальная длина массива с кодом
@@ -97,8 +100,6 @@ struct Asm_SPU
     size_t size_code;
     int ip;
     Labels labels;
-
-    //double ram[RAM_SIZE]; // он должен быть определенного типа?
 };
 
 
@@ -160,13 +161,23 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
     {
         size_t len_str = strlen(command);
 
-         if (command[len_str - 1] == ':')
+        if (command[len_str - 1] == ':')
         {
             command[len_str - 1] = '\0';
             if (run_num == 1) create_new_label(proc, command);
 
             continue;
         }
+
+        // struct CommandWithArg {
+        //     const char*;
+        //     enum;
+        //     foo;
+        // }
+
+        // strcmp(const char*) foo(file_asm, proc, enum)
+
+        // {{"PUSH", PUSH, stack_command},  {"JA", JA, put_jump_commands}}
 
         CHECK_COMMAND("PUSH")
         {
@@ -227,6 +238,14 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
             put_draw_command(file_asm, proc);
             continue;
         }
+
+        CHECK_COMMAND("CALL")
+        {
+            put_jump_commands(CALL, file_asm, proc);
+            continue;
+        }
+
+        CHECK_COMMAND("RET") FILL_CODE_FUNC_WITH_NO_ARG(RET)
 
         CHECK_COMMAND("HLT") FILL_CODE_FUNC_WITH_NO_ARG(HLT)        
     }
@@ -362,9 +381,6 @@ void check_and_put_in_right_order(Asm_SPU* proc, char arg_1[], char arg_2[])
     }
 }
 
-// TODO: const char* const registers_names[] = {"RAX", "RBX", ...}
-
-// не пон как использовать
 
 IndexRegisters index_of_register(char arg[])
 {

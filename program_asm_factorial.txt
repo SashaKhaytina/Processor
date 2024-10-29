@@ -1,5 +1,126 @@
 IN
 POP RAX
+
+CALL FACTOR
+
+PUSH RAX
+OUT
+
+HLT
+
+
+
+FACTOR:
+PUSH RAX
+PUSH 1
+
+JE IF_TRUE
+
+
+    PUSH RAX
+
+    PUSH 1
+    PUSH RAX
+    SUB
+    POP RAX
+
+    CALL FACTOR
+
+    PUSH RAX
+    MUL
+    POP RAX
+    
+    RET
+
+
+
+
+IF_TRUE:
+RET
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+IN
+POP RAX
 PUSH RAX
 POP RBX
 
