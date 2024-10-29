@@ -1,6 +1,27 @@
 #include "working_with_code.h"
 
-int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
+
+#define CHECK_COMMAND(commanda) if (strcmp(command, commanda) == 0)
+#define FILL_CODE_FUNC(commanda) {put_command(file_asm, proc, commanda); continue;}
+
+
+static void put_command(FILE* file_asm, Asm_SPU* proc, MashineCode command);
+
+
+static void put_command(FILE* file_asm, Asm_SPU* proc, MashineCode command)
+{
+    // commands_arr[command].to_do_comm(file_asm, proc, command);
+    int len_struct_arr = (int) (sizeof(commands_arr) / sizeof(CommandWithArg));
+
+    for (int i = 0; i < len_struct_arr; i++)
+    {
+        if (command == commands_arr[i].command) 
+            commands_arr[i].to_do_comm(file_asm, proc, command);
+    }
+}
+
+
+int fill_code(int argc, const char *argv[], Asm_SPU* proc, int run_num)
 {
     Labels* labels = &proc->labels;
     double* code = proc->code;
@@ -13,8 +34,6 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
 
     if (argc != 1) file_asm = fopen(argv[1], "r");
     else file_asm = fopen(FILE_NAME, "r");
-
-    // |mem|reg|imm|
 
     char command[MAX_COMMAND_SIZE] = {};
 
@@ -30,95 +49,50 @@ int code_put(int argc, const char *argv[], Asm_SPU* proc, int run_num)
             continue;
         }
 
-        // struct CommandWithArg {
-        //     const char*;
-        //     enum;
-        //     foo;
-        // }
+        CHECK_COMMAND("PUSH") FILL_CODE_FUNC(PUSH)
 
-        // strcmp(const char*) foo(file_asm, proc, enum)
+        CHECK_COMMAND("POP")  FILL_CODE_FUNC(POP)
+        
+        CHECK_COMMAND("ADD")  FILL_CODE_FUNC(ADD)
+        
+        CHECK_COMMAND("SUB")  FILL_CODE_FUNC(SUB)
+        
+        CHECK_COMMAND("MUL")  FILL_CODE_FUNC(MUL)
+        
+        CHECK_COMMAND("OUT")  FILL_CODE_FUNC(OUT)
+        
+        CHECK_COMMAND("JUMP") FILL_CODE_FUNC(JUMP)
+        
+        CHECK_COMMAND("JA")   FILL_CODE_FUNC(JA)
+        
+        CHECK_COMMAND("JB")   FILL_CODE_FUNC(JB) 
+        
+        CHECK_COMMAND("JE")   FILL_CODE_FUNC(JE)
+        
+        CHECK_COMMAND("JNE")  FILL_CODE_FUNC(JNE)
+        
+        CHECK_COMMAND("IN")   FILL_CODE_FUNC(IN)
+        
+        CHECK_COMMAND("OUTC") FILL_CODE_FUNC(OUTC)
+        
+        CHECK_COMMAND("DRAW") FILL_CODE_FUNC(DRAW)
+        
+        CHECK_COMMAND("CALL") FILL_CODE_FUNC(CALL)
+        
+        CHECK_COMMAND("RET")  FILL_CODE_FUNC(RET)
+        
+        CHECK_COMMAND("DIV")  FILL_CODE_FUNC(DIV)
+        
+        CHECK_COMMAND("SQRT") FILL_CODE_FUNC(SQRT)
+        
+        CHECK_COMMAND("HLT")  FILL_CODE_FUNC(HLT)
 
-        // {{"PUSH", PUSH, stack_command},  {"JA", JA, put_jump_commands}}
 
-        CHECK_COMMAND("PUSH")
-        {
-            stack_command(file_asm, proc, PUSH);
-            continue;
-        }
-
-        CHECK_COMMAND("POP")
-        {
-            stack_command(file_asm, proc, POP);
-            continue;
-        }
-
-        CHECK_COMMAND("ADD") FILL_CODE_FUNC_WITH_NO_ARG(ADD)
-
-        CHECK_COMMAND("SUB") FILL_CODE_FUNC_WITH_NO_ARG(SUB)
-
-        CHECK_COMMAND("MUL") FILL_CODE_FUNC_WITH_NO_ARG(MUL)
-
-        CHECK_COMMAND("DIV") FILL_CODE_FUNC_WITH_NO_ARG(DIV)
-
-        CHECK_COMMAND("SQRT") FILL_CODE_FUNC_WITH_NO_ARG(SQRT)
-
-        CHECK_COMMAND("OUT") FILL_CODE_FUNC_WITH_NO_ARG(OUT)
-
-        CHECK_COMMAND("OUTC") FILL_CODE_FUNC_WITH_NO_ARG(OUTC)
-    
-        CHECK_COMMAND("IN") FILL_CODE_FUNC_WITH_NO_ARG(IN)
-
-        CHECK_COMMAND("JUMP")
-        {
-            put_jump_commands(JUMP, file_asm, proc);
-            continue;
-        }
-
-        CHECK_COMMAND("JA")
-        {
-            put_jump_commands(JA, file_asm, proc);
-            continue;
-        }
-
-        CHECK_COMMAND("JB")
-        {
-            put_jump_commands(JB, file_asm, proc);
-            continue;
-        }
-
-        CHECK_COMMAND("JE")
-        {
-            put_jump_commands(JE, file_asm, proc);
-            continue;
-        }
-
-        CHECK_COMMAND("JNE")
-        {
-            put_jump_commands(JNE, file_asm, proc);
-            continue;
-        }
-
-        CHECK_COMMAND("DRAW")
-        {
-            put_draw_command(file_asm, proc);
-            continue;
-        }
-
-        CHECK_COMMAND("CALL")
-        {
-            put_jump_commands(CALL, file_asm, proc);
-            continue;
-        }
-
-        CHECK_COMMAND("RET") FILL_CODE_FUNC_WITH_NO_ARG(RET)
-
-        CHECK_COMMAND("HLT") FILL_CODE_FUNC_WITH_NO_ARG(HLT)        
     }
     fclose(file_asm);
 
     return *ip;
 }
-
 
 
 void print_code(double code[], size_t size_code)
@@ -129,7 +103,6 @@ void print_code(double code[], size_t size_code)
     }
     printf("\n");
 }
-
 
 
 void code_output_file(Asm_SPU* proc)

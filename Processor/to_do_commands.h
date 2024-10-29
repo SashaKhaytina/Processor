@@ -3,6 +3,8 @@
 
 #include "header_proc.h"
 
+const double DELTA = 1e-10;
+
 void to_do_push            (SPU* proc);
 void to_do_pop             (SPU* proc);
 void to_do_calculate       (SPU* proc, MashineCode operation);

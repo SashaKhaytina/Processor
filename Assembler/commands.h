@@ -4,14 +4,13 @@
 #include "header_asm.h"
 #include "working_with_labels.h"
 
-void stack_command    (FILE* file_asm, Asm_SPU* proc, MashineCode type_command);
-void put_jump_commands(MashineCode jump_type, FILE* file_asm, Asm_SPU* proc);
-void put_draw_command (FILE* file_asm, Asm_SPU* proc);
-
-IndexRegisters index_of_register(char arg[]);
-void check_and_put_in_right_order(Asm_SPU* proc, char arg_1[], char arg_2[]);
+const size_t MAX_ARG_COMMAND_SIZE = 50; // Максимальная длина АРГУМЕНТА КОМАНДЫ (кол-во символов)
 
 
+void stack_command             (FILE* file_asm, Asm_SPU* proc, MashineCode type_command);
+void put_jump_commands         (FILE* file_asm, Asm_SPU* proc, MashineCode jump_type);
+void fill_code_func_with_no_arg(FILE* file_asm, Asm_SPU* proc, MashineCode com);
+void put_draw_command          (FILE* file_asm, Asm_SPU* proc, MashineCode command);
 
 
 #endif

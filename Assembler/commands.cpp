@@ -1,6 +1,37 @@
 #include "commands.h"
 
 
+static void           check_and_put_in_right_order(Asm_SPU* proc, char arg_1[], char arg_2[]);
+static IndexRegisters index_of_register           (char arg[]);
+
+
+
+static void check_and_put_in_right_order(Asm_SPU* proc, char arg_1[], char arg_2[])
+{
+    if (isalpha(arg_1[0]))
+    {
+        proc->code[(proc->ip)++] = index_of_register(arg_1);
+        proc->code[(proc->ip)++] = atof(arg_2);
+    }
+    else
+    {
+        proc->code[(proc->ip)++] = index_of_register(arg_2);
+        proc->code[(proc->ip)++] = atof(arg_1);
+    }
+}
+
+
+static IndexRegisters index_of_register(char arg[])
+{
+    if      (strcmp(arg, "RAX") == 0) return RAX;
+    else if (strcmp(arg, "RBX") == 0) return RBX;
+    else if (strcmp(arg, "RCX") == 0) return RCX;
+    else if (strcmp(arg, "RDX") == 0) return RDX;
+    else if (strcmp(arg, "REX") == 0) return REX;
+    return RAX; // unreachable
+}
+
+
 void stack_command(FILE* file_asm, Asm_SPU* proc, MashineCode type_command)
 {
     proc->code[proc->ip] = type_command;
@@ -70,33 +101,13 @@ void stack_command(FILE* file_asm, Asm_SPU* proc, MashineCode type_command)
 }
 
 
-void check_and_put_in_right_order(Asm_SPU* proc, char arg_1[], char arg_2[])
+void fill_code_func_with_no_arg(FILE* file_asm, Asm_SPU* proc, MashineCode com)
 {
-    if (isalpha(arg_1[0]))
-    {
-        proc->code[(proc->ip)++] = index_of_register(arg_1);
-        proc->code[(proc->ip)++] = atof(arg_2);
-    }
-    else
-    {
-        proc->code[(proc->ip)++] = index_of_register(arg_2);
-        proc->code[(proc->ip)++] = atof(arg_1);
-    }
+    proc->code[proc->ip++] = com;
 }
 
 
-IndexRegisters index_of_register(char arg[])
-{
-    if      (strcmp(arg, "RAX") == 0) return RAX;
-    else if (strcmp(arg, "RBX") == 0) return RBX;
-    else if (strcmp(arg, "RCX") == 0) return RCX;
-    else if (strcmp(arg, "RDX") == 0) return RDX;
-    else if (strcmp(arg, "REX") == 0) return REX;
-    return RAX; // unreachable
-}
-
-
-void put_jump_commands(MashineCode jump_type, FILE* file_asm, Asm_SPU* proc)
+void put_jump_commands(FILE* file_asm, Asm_SPU* proc, MashineCode jump_type)
 {
     proc->code[proc->ip++] = jump_type;
 
@@ -107,7 +118,7 @@ void put_jump_commands(MashineCode jump_type, FILE* file_asm, Asm_SPU* proc)
 }
 
 
-void put_draw_command (FILE* file_asm, Asm_SPU* proc)
+void put_draw_command (FILE* file_asm, Asm_SPU* proc, MashineCode command)
 {
     proc->code[proc->ip++] = DRAW;
     int arg = 0;

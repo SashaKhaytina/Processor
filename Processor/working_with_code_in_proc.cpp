@@ -8,7 +8,6 @@ void run_code(SPU* proc)
     bool continue_process = true;
     while (continue_process)
     {
-        // print_stack_info(&proc->stack, OK);
         MashineCode command = (MashineCode) ((int)(proc->code[proc->ip]) & ONLY_COMMAND_NUM_MASK);
         switch (command)
         {
@@ -19,7 +18,7 @@ void run_code(SPU* proc)
             break;
         }
         
-        case POP:  // Кладет в регистр последний элемент стека 
+        case POP:
         {
             // printf("POP\n");
             to_do_pop(proc);
@@ -42,7 +41,7 @@ void run_code(SPU* proc)
             break;
         }
 
-        case OUT: // Он должен вытащить еще 
+        case OUT: 
         {
             // printf("OUT\n");
             proc->ip++;
@@ -58,7 +57,7 @@ void run_code(SPU* proc)
             break;
         }
         
-        case IN: // push в стек то, что вводим с клавиатуры
+        case IN: 
         {
             // printf("IN\n");
             proc->ip++;

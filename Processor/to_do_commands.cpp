@@ -1,8 +1,8 @@
 #include "to_do_commands.h"
 
 
-static StackElem_t  get_arg_push(SPU* proc, int bit_arg); // они только в этом файле
-static StackElem_t* get_arg_pop(SPU* proc, int bit_arg); // они только в этом файле
+static StackElem_t  get_arg_push(SPU* proc, int bit_arg); 
+static StackElem_t* get_arg_pop(SPU* proc, int bit_arg); 
 
 
 StackElem_t get_arg_push(SPU* proc, int bit_arg) // Возвращает значение того, что нужно положить в стек
@@ -20,10 +20,7 @@ StackElem_t get_arg_push(SPU* proc, int bit_arg) // Возвращает зна�
     if (bit_arg & RAM)    // оперативная память (из нее пытаются достать StackElem_t)
     {
         which_push = proc->ram[(int) which_push];
-        //which_push = *(StackElem_t*) (proc->ram + (int) which_push);
     }
-    //printf("%g - which push\n", which_push);
-    //printf("%g - which push\n", *(StackElem_t*) (proc->ram + (int) which_push));
 
     return which_push;
 }
@@ -44,7 +41,6 @@ StackElem_t* get_arg_pop(SPU* proc, int bit_arg) // Возвращает ука�
         }
 
         return &proc->ram[(int) which_push]; // указатель на яч в оп памяти
-        //return (StackElem_t*) (proc->ram + (int) which_push); // StackElem_t* ли мы хотим???
     }
     else                                                                     // Только регистр
     {
@@ -74,15 +70,13 @@ void to_do_pop(SPU* proc)
 }
 
 
-
-// void to_do_calculate(SPU* proc, MathOperation operation)
 void to_do_calculate(SPU* proc, MashineCode operation)
 {
     StackElem_t elem1 = 0;
     StackElem_t elem2 = 0;
     
-    stack_pop(&proc->stack, &elem1); // Удаляем
-    stack_pop(&proc->stack, &elem2); // Удаляем
+    stack_pop(&proc->stack, &elem1); 
+    stack_pop(&proc->stack, &elem2); 
 
     switch (operation)
     {
@@ -135,6 +129,7 @@ void to_do_out(SPU* proc)
     printf("%f - это результат\n", elem);
 }
 
+
 void to_do_outc(SPU* proc)
 {
     StackElem_t elem = 0;
@@ -143,12 +138,14 @@ void to_do_outc(SPU* proc)
     printf("%c", (int) elem);
 }
 
+
 void to_do_draw(SPU* proc)
 {
     int num = (int) proc->code[proc->ip++];
 
-    for (int i = 0; i < num * 8; i += 8) printf("%c", (int) proc->ram[i]); //printf("%c", (int) *(StackElem_t*) (proc->ram + i));
+    for (int i = 0; i < num * 8; i += 8) printf("%c", (int) proc->ram[i]); 
 }
+
 
 void to_do_in(SPU* proc)
 {
@@ -159,12 +156,13 @@ void to_do_in(SPU* proc)
     stack_push(&proc->stack, arg);
 }
 
+
 void to_do_call(SPU* proc)
 {
     stack_push(&proc->stack, (StackElem_t)(proc->ip + 1));
     proc->ip = (size_t) proc->code[proc->ip];
-    //stack_push(&proc->stack, proc->ip);
 }
+
 
 void to_do_ret (SPU* proc)
 {
@@ -179,8 +177,8 @@ void to_do_conditional_jump(SPU* proc, MashineCode operation)
     StackElem_t elem1 = 0;
     StackElem_t elem2 = 0;
     
-    stack_pop(&proc->stack, &elem1); // Удаляем
-    stack_pop(&proc->stack, &elem2); // Удаляем
+    stack_pop(&proc->stack, &elem1); 
+    stack_pop(&proc->stack, &elem2); 
 
     bool correctness_condition = false;
 
