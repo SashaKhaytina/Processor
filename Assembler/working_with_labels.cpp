@@ -11,6 +11,7 @@ void create_new_label(Asm_SPU* proc, char label_name[])
     (&proc->labels)->size++;
 }
 
+
 int find_label_ip(Labels* labels, char label_name[]) 
 {
     for (size_t i = 0; i < labels->size; i++)

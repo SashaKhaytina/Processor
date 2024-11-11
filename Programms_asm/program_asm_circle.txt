@@ -1,4 +1,190 @@
 IN
+POP RAX
+
+
+PUSH 2  PUSH RAX  MUL    PUSH 1   ADD          PUSH RAX  PUSH 2  MUL           MUL
+POP RCX
+
+PUSH 0  POP RBX
+
+CICLE:
+
+    PUSH 32
+    POP [RBX]
+
+    PUSH RBX + 1    POP RBX
+
+    PUSH RBX    PUSH RCX    JB CICLE
+
+
+
+
+
+
+PUSH 2  PUSH RAX  MUL    PUSH 1   ADD
+POP RCX
+
+PUSH 1  POP RBX
+
+CICLE2:
+
+    PUSH 10
+
+    PUSH RBX  PUSH RAX PUSH 2 MUL PUSH 1 ADD    MUL
+    POP RDX
+    PUSH RDX  PUSH -1  ADD POP RDX
+
+    POP [RDX]
+
+
+    PUSH RBX + 1    POP RBX
+
+    PUSH RBX    PUSH RCX    JB CICLE2
+
+
+
+
+
+
+
+
+PUSH 1
+POP RBX
+
+PUSH RBX    PUSH 2 PUSH RAX MUL    JA SKIP_C
+
+
+    DO_AG:
+
+
+    PUSH 42  
+    PUSH RBX  PUSH RAX  MUL POP RCX    
+    PUSH RCX PUSH -1 ADD POP RCX
+    POP [RCX]
+
+
+    PUSH 42  
+    PUSH RBX  PUSH RAX + 1  MUL POP RCX 
+    PUSH RCX PUSH -1 ADD POP RCX
+    POP [RCX]
+
+    
+
+    PUSH RBX  PUSH 2  ADD  POP RBX
+
+    PUSH RBX    PUSH 2 PUSH RAX MUL    JB DO_AG
+    
+SKIP_C:
+
+
+
+
+
+
+
+
+
+PUSH 2 PUSH RAX MUL PUSH 1 ADD PUSH RAX MUL PUSH 1 ADD
+POP REX
+
+PUSH 2 PUSH RAX MUL PUSH 1 ADD
+POP RDX
+
+PUSH 0
+POP RBX
+
+PUSH RBX    PUSH RAX   JA SKIP_C2
+
+
+    DO_AG2:
+
+
+    PUSH 42  
+    PUSH RBX  PUSH RDX MUL    PUSH REX        ADD    PUSH RBX ADD         POP RCX    
+    PUSH RCX PUSH -1 ADD POP RCX
+    POP [RCX]
+
+
+    PUSH 42  
+    PUSH RBX  PUSH RDX MUL    PUSH REX        ADD    PUSH RBX PUSH -1 MUL ADD  PUSH RDX PUSH -2 ADD ADD         POP RCX
+    PUSH RCX PUSH -1 ADD POP RCX
+    POP [RCX]
+
+    
+
+    PUSH RBX  PUSH 1  ADD  POP RBX
+
+    PUSH RBX    PUSH RAX    JB DO_AG2
+    
+SKIP_C2:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PUSH 2  PUSH RAX  MUL    PUSH 1   ADD          PUSH RAX  PUSH 2  MUL           MUL
+POP RCX
+
+PUSH 0  POP RBX
+
+CICLE3:
+
+    PUSH [RBX]
+    OUTC
+
+    PUSH RBX + 1    POP RBX
+
+    PUSH RBX    PUSH RCX    JB CICLE3
+
+HLT
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+IN
 PUSH -1
 ADD
 

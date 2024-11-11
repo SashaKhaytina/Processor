@@ -9,7 +9,7 @@ const char* const FILE_NAME   = "Programms_asm/program_asm.txt";
 
 struct CommandWithArg 
 {
-    const char Command_name[MAX_COMMAND_SIZE];
+    const char сommand_name[MAX_COMMAND_SIZE];
     MashineCode command;
     void (*to_do_comm)(FILE* file_asm, Asm_SPU* proc, MashineCode com);
 };

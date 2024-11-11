@@ -5,21 +5,6 @@
 #define FILL_CODE_FUNC(commanda) {put_command(file_asm, proc, commanda); continue;}
 
 
-static void put_command(FILE* file_asm, Asm_SPU* proc, MashineCode command);
-
-
-static void put_command(FILE* file_asm, Asm_SPU* proc, MashineCode command)
-{
-    // commands_arr[command].to_do_comm(file_asm, proc, command);
-    int len_struct_arr = (int) (sizeof(commands_arr) / sizeof(CommandWithArg));
-
-    for (int i = 0; i < len_struct_arr; i++)
-    {
-        if (command == commands_arr[i].command) 
-            commands_arr[i].to_do_comm(file_asm, proc, command);
-    }
-}
-
 
 int fill_code(int argc, const char *argv[], Asm_SPU* proc, int run_num)
 {
@@ -36,6 +21,7 @@ int fill_code(int argc, const char *argv[], Asm_SPU* proc, int run_num)
     else file_asm = fopen(FILE_NAME, "r");
 
     char command[MAX_COMMAND_SIZE] = {};
+    int len_struct_arr = (int) (sizeof(commands_arr) / sizeof(CommandWithArg));
 
     while(fscanf(file_asm, "%s", command) != EOF) 
     {
@@ -49,45 +35,12 @@ int fill_code(int argc, const char *argv[], Asm_SPU* proc, int run_num)
             continue;
         }
 
-        CHECK_COMMAND("PUSH") FILL_CODE_FUNC(PUSH)
 
-        CHECK_COMMAND("POP")  FILL_CODE_FUNC(POP)
-        
-        CHECK_COMMAND("ADD")  FILL_CODE_FUNC(ADD)
-        
-        CHECK_COMMAND("SUB")  FILL_CODE_FUNC(SUB)
-        
-        CHECK_COMMAND("MUL")  FILL_CODE_FUNC(MUL)
-        
-        CHECK_COMMAND("OUT")  FILL_CODE_FUNC(OUT)
-        
-        CHECK_COMMAND("JUMP") FILL_CODE_FUNC(JUMP)
-        
-        CHECK_COMMAND("JA")   FILL_CODE_FUNC(JA)
-        
-        CHECK_COMMAND("JB")   FILL_CODE_FUNC(JB) 
-        
-        CHECK_COMMAND("JE")   FILL_CODE_FUNC(JE)
-        
-        CHECK_COMMAND("JNE")  FILL_CODE_FUNC(JNE)
-        
-        CHECK_COMMAND("IN")   FILL_CODE_FUNC(IN)
-        
-        CHECK_COMMAND("OUTC") FILL_CODE_FUNC(OUTC)
-        
-        CHECK_COMMAND("DRAW") FILL_CODE_FUNC(DRAW)
-        
-        CHECK_COMMAND("CALL") FILL_CODE_FUNC(CALL)
-        
-        CHECK_COMMAND("RET")  FILL_CODE_FUNC(RET)
-        
-        CHECK_COMMAND("DIV")  FILL_CODE_FUNC(DIV)
-        
-        CHECK_COMMAND("SQRT") FILL_CODE_FUNC(SQRT)
-        
-        CHECK_COMMAND("HLT")  FILL_CODE_FUNC(HLT)
-
-
+        for (int i = 0; i < len_struct_arr; i++)
+        {
+            if (strcmp(command, commands_arr[i].сommand_name) == 0)
+                commands_arr[i].to_do_comm(file_asm, proc, commands_arr[i].command);
+        }
     }
     fclose(file_asm);
 
@@ -113,5 +66,5 @@ void code_output_file(Asm_SPU* proc)
     {
         fprintf(file_code, "%lg ", proc->code[i]);
     }
-    printf("\n");
+    fclose(file_code);
 }

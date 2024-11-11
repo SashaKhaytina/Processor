@@ -55,7 +55,7 @@ void stack_command(FILE* file_asm, Asm_SPU* proc, MashineCode type_command)
             {
                 printf("Синтаксическая ошибка\n"); // в pop нельзя подавать сумму без квадратныx скобок
             }
-            else // PUSH
+            else                                   // PUSH
             {
                 proc->code[(proc->ip)++] += REGISTER + NUMBER;
             }
@@ -64,7 +64,7 @@ void stack_command(FILE* file_asm, Asm_SPU* proc, MashineCode type_command)
         check_and_put_in_right_order(proc, arg_1, arg_2);
     }
 
-    else if (count_args == 1) // один аргумент
+    else if (count_args == 1) // Один аргумент
     {
         if (arg_1[0] == '[' && arg_1[strlen(arg_1) - 1] == ']')   // Опреативная память
         {

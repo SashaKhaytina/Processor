@@ -17,7 +17,7 @@ StackElem_t get_arg_push(SPU* proc, int bit_arg) // Возвращает зна�
     {
         which_push += proc->code[proc->ip++];
     }
-    if (bit_arg & RAM)    // оперативная память (из нее пытаются достать StackElem_t)
+    if (bit_arg & RAM)    // оперативная память 
     {
         which_push = proc->ram[(int) which_push];
     }

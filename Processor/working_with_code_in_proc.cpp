@@ -13,21 +13,18 @@ void run_code(SPU* proc)
         {
         case PUSH: 
         {
-            // printf("PUSH\n");
             to_do_push(proc);
             break;
         }
         
         case POP:
         {
-            // printf("POP\n");
             to_do_pop(proc);
             break;
         }
         
         case ADD: case SUB: case MUL: case DIV: 
         {
-            // printf("MATH_COMMAND\n");
             proc->ip++;
             to_do_calculate(proc, command);
             break;
@@ -35,7 +32,6 @@ void run_code(SPU* proc)
 
         case SQRT:
         {
-            // printf("SQRT\n");
             proc->ip++;
             to_do_sqrt(proc);
             break;
@@ -43,7 +39,6 @@ void run_code(SPU* proc)
 
         case OUT: 
         {
-            // printf("OUT\n");
             proc->ip++;
             to_do_out(proc);
             break;
@@ -51,7 +46,6 @@ void run_code(SPU* proc)
 
         case OUTC: 
         {
-            // printf("OUTC\n");
             proc->ip++;
             to_do_outc(proc);
             break;
@@ -59,7 +53,6 @@ void run_code(SPU* proc)
         
         case IN: 
         {
-            // printf("IN\n");
             proc->ip++;
             to_do_in(proc);
             break;
@@ -67,7 +60,6 @@ void run_code(SPU* proc)
 
         case JUMP:
         {
-            // printf("JUMP\n");
             proc->ip++;
             proc->ip = (size_t) proc->code[proc->ip];
             break;
@@ -75,14 +67,12 @@ void run_code(SPU* proc)
         
         case JA: case JB: case JE: case JNE:
         {
-            // printf("ANOTHER JUMP\n");
             to_do_conditional_jump(proc, command);
             break;
         }
 
         case DRAW: 
         {
-            // printf("DRAW\n");
             proc->ip++;
             to_do_draw(proc);
             break;
@@ -90,7 +80,6 @@ void run_code(SPU* proc)
 
         case CALL:
         {
-            // printf("CALL\n");
             proc->ip++;
             to_do_call(proc);
             break;
@@ -98,7 +87,6 @@ void run_code(SPU* proc)
 
         case RET:
         {
-            // printf("RET\n");
             proc->ip++;
             to_do_ret(proc);
             break;
@@ -106,7 +94,6 @@ void run_code(SPU* proc)
         
         case HLT:
         {
-            // printf("HLT\n");
             proc->ip++;
             printf("Закончили\n");
             continue_process = false;
@@ -120,7 +107,6 @@ void run_code(SPU* proc)
         }
         }
 
-        // print_stack_info(&proc->stack, OK);
 
     }
 }
@@ -134,9 +120,9 @@ size_t read_file_code(SPU* proc)
     
     proc->ip = 0;
 
-    int num_in_mashine_code = 0;
+    double num_in_mashine_code = 0;
 
-    while (fscanf(file_code, "%d", &num_in_mashine_code) != EOF)
+    while (fscanf(file_code, "%lg", &num_in_mashine_code) != EOF)
     {
         proc->code[proc->ip++] = num_in_mashine_code;
     }
