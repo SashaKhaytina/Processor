@@ -194,6 +194,16 @@ void to_do_conditional_jump(SPU* proc, MashineCode operation)
         correctness_condition = (elem2 < elem1);
         break;
         }
+    case JNL:
+        {
+        correctness_condition = (elem2 >= elem1);
+        break;
+        }
+    case JNG:
+        {
+        correctness_condition = (elem2 <= elem1);
+        break;
+        }
     case JE:
         {
         correctness_condition = (fabs(elem2 - elem1) < DELTA);

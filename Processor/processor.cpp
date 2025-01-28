@@ -8,7 +8,7 @@ int main()
 
     size_t size_code = read_file_code(&proc);
 
-    // print_code(proc.code, size_code);
+    print_code(proc.code, size_code);
 
     default_stack_ctor(&proc.stack, INITIAL_CAPACITY);
     run_code(&proc);

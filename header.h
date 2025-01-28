@@ -24,8 +24,12 @@ enum MashineCode
     MUL, 
     OUT, 
     JUMP,
-    JA,
-    JB,
+    JA,  // >
+    JB,  // <
+
+    JNL, // не меньше (>=)
+    JNG, // не больше (<=)
+
     JE,
     JNE,
     IN,

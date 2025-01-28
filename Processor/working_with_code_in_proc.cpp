@@ -65,7 +65,7 @@ void run_code(SPU* proc)
             break;
         }
         
-        case JA: case JB: case JE: case JNE:
+        case JA: case JB: case JNG: case JNL: case JE: case JNE:
         {
             to_do_conditional_jump(proc, command);
             break;

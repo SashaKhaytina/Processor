@@ -25,6 +25,10 @@ const CommandWithArg commands_arr[] = {
                                         {"JUMP", JUMP, put_jump_commands},
                                         {"JA",   JA,   put_jump_commands},
                                         {"JB",   JB,   put_jump_commands},
+
+                                        {"JNL",  JNL,  put_jump_commands},
+                                        {"JNG",  JNG,  put_jump_commands},
+
                                         {"JE",   JE,   put_jump_commands},
                                         {"JNE",  JNE,  put_jump_commands},
                                         {"IN",   IN,   fill_code_func_with_no_arg},
